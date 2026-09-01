@@ -183,6 +183,7 @@
             box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -291,7 +292,7 @@
 
     async function loadAppointments() {
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/bookings/', {
+            const response = await fetch(API_BASE_URL + '/api/bookings/', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -325,7 +326,7 @@
         const errorBox = document.querySelector(`.appointment-row[data-id="${bookingId}"] .action-error`);
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/payments/initialize/',{
+            const response = await fetch(API_BASE_URL + '/api/payments/initialize/',{
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -384,7 +385,7 @@
         const errorBox = document.querySelector(`.appointment-row[data-id="${bookingId}"] .action-error`);
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/payments/verify/', {
+            const response = await fetch(API_BASE_URL + '/api/payments/verify/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -448,7 +449,7 @@
         const errorBox = document.querySelector(`.appointment-row[data-id="${id}"] .action-error`);
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/bookings/${id}/cancel/`, {
+            const response = await fetch(`${API_BASE_URL}/api/bookings/${id}/cancel/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

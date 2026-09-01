@@ -127,6 +127,7 @@
             color: white;
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -221,7 +222,7 @@
 
     async function loadCurrentProfile() {
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/profiles/patient/me/', {
+            const response = await fetch(API_BASE_URL + '/api/profiles/patient/me/', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -275,7 +276,7 @@
         saveError.style.display = 'none';
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/profiles/patient/me/', {
+            const response = await fetch(API_BASE_URL + '/api/profiles/patient/me/', {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

@@ -61,6 +61,7 @@
             border-radius: 0.375rem;
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -199,7 +200,7 @@
             gender: document.getElementById('gender').value,
         };
     try {
-        const response = await fetch('http://127.0.0.1:8000/api/auth/register/', {
+        const response = await fetch(API_BASE_URL + '/api/auth/register/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

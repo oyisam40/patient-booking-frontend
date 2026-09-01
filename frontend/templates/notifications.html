@@ -183,6 +183,7 @@
             color: white;
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -307,9 +308,9 @@
         document.getElementById('notificationsList').innerHTML = '';
 
         try {
-            let url = 'http://127.0.0.1:8000/api/notifications/';
+            let url = API_BASE_URL + '/api/notifications/';
             if (filter === 'UNREAD') {
-                url = 'http://127.0.0.1:8000/api/notifications/unread/';
+                url = API_BASE_URL + '/api/notifications/unread/';
             }
 
             const response = await fetch(url, {
@@ -343,7 +344,7 @@
 
     async function markAsRead(id) {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/notifications/${id}/read/`, {
+            const response = await fetch(`${API_BASE_URL}/api/notifications/${id}/read/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

@@ -189,6 +189,7 @@
             box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -319,7 +320,7 @@
 
     async function loadDoctorDetail() {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${doctorId}/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}/`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -409,7 +410,7 @@
         closeDeactivateModal();
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${doctorId}/deactivate/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}/deactivate/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -428,7 +429,7 @@
 
     async function activateDoctor() {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${doctorId}/activate/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${doctorId}/activate/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

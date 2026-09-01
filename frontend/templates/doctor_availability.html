@@ -141,6 +141,7 @@
             font-weight: bold;
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -300,7 +301,7 @@
             let lastError = null;
 
             for (const slot of slots) {
-                const response = await fetch('http://127.0.0.1:8000/api/doctors/doctor/availability/', {
+                const response = await fetch(API_BASE_URL + '/api/doctors/doctor/availability/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

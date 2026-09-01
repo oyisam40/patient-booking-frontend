@@ -39,6 +39,7 @@
         .forgot-link:hover { color: #16808f; text-decoration: underline; }
         input[type="text"] { border-radius: 0.375rem; }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -93,7 +94,7 @@
             };
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/auth/verify-otp/', {
+                const response = await fetch(API_BASE_URL + '/api/auth/verify-otp/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

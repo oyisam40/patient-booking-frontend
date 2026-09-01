@@ -209,6 +209,7 @@
                 box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
             }
         </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -341,9 +342,9 @@
         document.getElementById('doctorList').innerHTML = '';
 
         try {
-            let url = 'http://127.0.0.1:8000/api/admin/doctors/';
+            let url = API_BASE_URL + '/api/admin/doctors/';
             if (status === 'PENDING') {
-                url = 'http://127.0.0.1:8000/api/admin/doctors/pending/';
+                url = API_BASE_URL + '/api/admin/doctors/pending/';
             }
 
             const response = await fetch(url, {
@@ -377,7 +378,7 @@
 
     async function updateDoctorStatus(id, action) {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${id}/${action}/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${id}/${action}/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -431,7 +432,7 @@
         closeDeactivateModal();
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${id}/deactivate/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${id}/deactivate/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -458,7 +459,7 @@
 
     async function activateDoctor(id) {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${id}/activate/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/doctors/${id}/activate/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

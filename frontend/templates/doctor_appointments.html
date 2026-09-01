@@ -183,6 +183,7 @@
             box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -331,7 +332,7 @@
 
     async function loadAppointments() {
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/bookings/doctor/', {
+            const response = await fetch(API_BASE_URL + '/api/bookings/doctor/', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -373,7 +374,7 @@
                 options.body = JSON.stringify({ reason: reason });
             }
 
-            const response = await fetch(`http://127.0.0.1:8000/api/bookings/${id}/${action}/`, options);
+            const response = await fetch(`${API_BASE_URL}/api/bookings/${id}/${action}/`, options);
 
             const data = await response.json();
 

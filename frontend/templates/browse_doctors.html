@@ -150,6 +150,7 @@
             color: white;
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -224,7 +225,7 @@
         document.getElementById('doctorList').innerHTML = '';
 
         try {
-            let url = 'http://127.0.0.1:8000/api/doctors/doctors/';
+            let url = API_BASE_URL + '/api/doctors/doctors/';
             if (specialty) {
                 url += `?specialty=${specialty}`;
             }

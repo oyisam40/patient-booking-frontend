@@ -79,6 +79,7 @@
             color: #16808f;
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -141,7 +142,7 @@
 
     async function loadDoctorDetail() {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/doctors/doctors/${doctorId}/`, {
+            const response = await fetch(`${API_BASE_URL}/api/doctors/doctors/${doctorId}/`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -184,7 +185,7 @@
         document.getElementById('bookBtn').disabled = true;
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/doctors/${doctorId}/availability/`, {
+            const response = await fetch(`${API_BASE_URL}/api/doctors/${doctorId}/availability/`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -309,7 +310,7 @@
         }
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/bookings/', {
+            const response = await fetch(API_BASE_URL + '/api/bookings/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

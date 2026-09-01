@@ -177,6 +177,7 @@
             box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -286,7 +287,7 @@
 
     async function loadPatientDetail() {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/patients/${patientId}/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/patients/${patientId}/`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -368,7 +369,7 @@
         closeDeactivateModal();
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/patients/${patientId}/deactivate/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/patients/${patientId}/deactivate/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -387,7 +388,7 @@
 
     async function activatePatient() {
         try {
-            const response = await fetch(`http://127.0.0.1:8000/api/admin/patients/${patientId}/activate/`, {
+            const response = await fetch(`${API_BASE_URL}/api/admin/patients/${patientId}/activate/`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

@@ -167,6 +167,7 @@
             color: white;
         }
     </style>
+    <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
 
@@ -247,7 +248,7 @@
         const token = localStorage.getItem('accessToken');
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/doctors/doctor/me/', {
+            const response = await fetch(API_BASE_URL + '/api/doctors/doctor/me/', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
