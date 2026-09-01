@@ -498,6 +498,12 @@
             jitsiApi.addListener('videoConferenceLeft', closeVideoCall);
             jitsiApi.addListener('readyToClose', closeVideoCall);
 
+            if (data.is_moderator) {
+                jitsiApi.addListener('videoConferenceJoined', () => {
+                    jitsiApi.executeCommand('toggleLobby', true)
+                });
+            }
+
             document.getElementById('videoCallOverlay').classList.add('open');
 
         } catch (error) {
