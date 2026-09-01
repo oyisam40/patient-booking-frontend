@@ -1,0 +1,188 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bg {
+            animation: slide 3s ease-in-out infinite alternate;
+            background-image: linear-gradient(-60deg, #1B9AAA 50%, #4FD1C5 50%);
+            bottom: 0;
+            left: -50%;
+            opacity: .5;
+            position: fixed;
+            right: -50%;
+            top: 0;
+            z-index: -1;
+        }
+        .bg2 {
+            animation-direction: alternate-reverse;
+            animation-duration: 4s;
+        }
+        .bg3 {
+            animation-duration: 5s;
+        }
+        @keyframes slide{
+           0% {transform: translateX(-25%)}
+            100% { transform: translateX(25%)}
+        }
+        body {
+            min-height: 100vh;
+        }
+
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+
+        .forgot-link {
+            color: #1B9AAA;
+            text-decoration: none;
+        }
+        .forgot-link:hover {
+            color: #16808f;
+            text-decoration: underline;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            border-radius: 0.375rem;
+        }
+        .login-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            text-align: left;
+            max-width: 320px;
+            margin: 0 auto 16px auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg"></div>
+    <div class="bg bg2"></div>
+    <div class="bg bg3"></div>
+
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+        <div class="card" style="max-width: 520px; width: 100%; margin: 1rem; box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.25);">
+
+            <div class="card-body p-4 text-center">
+                <img class="mt-4 mb-4" src="{% static 'images/Doconnect.jpg' %}" height="115" alt="DoConnect Logo">
+
+                <div class="row mb-3">
+                    <div class="col-4"></div>
+                    <div class="col-8 text-start">
+                        <h1 class="h3 mb-3 font-weight-normal">Welcome Back</h1>
+                    </div>
+                </div>
+
+                <form method="post" novalidate>
+                    <div id="loginError" class="login-error" style="display:none;"></div>
+
+                    <div class="mb-3">
+                        <input type="email" id="emailAddress" name="email" class="form-control mx-auto" style="max-width: 320px;" placeholder="Email Address" required autofocus>
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="password" id="password" name="password" placeholder="Password" class="form-control mx-auto" style="max-width: 320px;">
+                    </div>
+
+                    <div class="mb-4 mx-auto" style="max-width: 320px; display: flex; justify-content: space-between; align-items: center;">
+                        <label class="mb-0">
+                            <input type="checkbox" value="remember-me"> Remember me
+                        </label>
+                        <a href="#" class="forgot-link">Forgot password?</a>
+                    </div>
+
+                    <div class="mb-4">
+                        <button class="btn btn-teal mx-auto d-block" style="max-width: 320px; width: 100%;">Sign in</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const loginForm = document.querySelector('form');
+        const loginError = document.getElementById('loginError');
+
+        function extractErrorMessage(data) {
+            // The backend can return the error in a few shapes depending on
+            // where validation failed — handle the common ones.
+            if (typeof data === 'string') return data;
+            if (data.non_field_errors) return data.non_field_errors.join(' ');
+            if (data.errors && data.errors.non_field_errors) return data.errors.non_field_errors.join(' ');
+            if (data.detail) return data.detail;
+            if (data.message) return data.message;
+            return 'Login failed. Please check your details and try again.';
+        }
+
+        loginForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            loginError.style.display = 'none';
+
+            if (!loginForm.checkValidity()) {
+                loginForm.classList.add('was-validated');
+                return;
+            }
+
+            const payload = {
+                username_or_email: document.getElementById('emailAddress').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('accessToken', data.access);
+                    localStorage.setItem('refreshToken', data.refresh);
+
+                    // CHANGED: role is now saved to localStorage so shared pages
+                    // (like notifications.html) can build the correct sidebar
+                    // for whichever type of user is logged in
+                    if (data.user && data.user.role) {
+                        localStorage.setItem('userRole', data.user.role);
+                    }
+
+                    if (data.user && data.user.role === 'DOCTOR') {
+                        window.location.href = "{% url 'doctor_profile' %}";
+                    } else if (data.user && data.user.role === 'ADMIN') {
+                        window.location.href = "{% url 'admin_dashboard' %}";
+                    }
+                    else {
+                        window.location.href = "{% url 'patient_profile' %}";
+                    }
+                } else {
+                    loginError.textContent = extractErrorMessage(data);
+                    loginError.style.display = 'block';
+                }
+            } catch (error) {
+                loginError.textContent = 'Network error: could not reach the server';
+                loginError.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,482 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - My Appointments</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://js.paystack.co/v2/inline.js"></script>
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+        .page-card {
+            max-width: 700px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+        .appointment-row {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+        }
+        .appointment-row:last-child {
+            margin-bottom: 0;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform:uppercase;
+        }
+        .status-pending {
+           background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-approved {
+           background-color: #d4edda;
+            color: #155724;
+        }
+        .status-rejected, .status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-completed {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+        .modal-backdrop-custom {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-backdrop-custom.open {
+            display: flex;
+        }
+        .cancel-modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">My Appointments</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'patient_profile' %}" class="sidebar-link">Profile</a>
+            <a href="{% url 'patient_appointments' %}" class="sidebar-link active">My Appointments</a>
+            <a href="{% url 'browse_doctors' %}" class="sidebar-link">Find a Doctor</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+<div class="page-card">
+    <h1 class="h3 mb-4 text-center font-weight-normal">My Appointments</h1>
+
+    <div class="text-center" id="loadingState">
+        <p class="text-muted">Loading appointments...</p>
+    </div>
+
+    <div id="emptyState" class="text-center text-muted" style="display:none;">
+        <p>No appointments yet.</p>
+        <a href="{% url 'browse_doctors' %}" class="btn btn-teal">Find a Doctor</a>
+    </div>
+
+    <div id="errorState" class="text-center text-danger" style="display:none;">
+        Could not load appointments. Please try again later.
+    </div>
+
+    <div id="appointmentsList"></div>
+</div>
+    </div>
+
+<div class="modal-backdrop-custom" id="cancelModalBackdrop">
+    <div class="cancel-modal">
+        <h5 class="mb-3">Cancel Appointment</h5>
+        <p class="text-muted mb-3">Please tell us why you're cancelling this appointment.</p>
+        <textarea id="cancelReasonInput" class="form-control mb-2" rows="3" placeholder="e.g. Schedule conflict"></textarea>
+        <div class="text-danger mb-2" id="cancelReasonError" style="display:none;">A cancellation reason is required.</div>
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary w-100" id="cancelModalDismiss">Keep Appointment</button>
+            <button type="button" class="btn btn-outline-danger w-100" id="cancelModalConfirm">Confirm Cancellation</button>
+        </div>
+    </div>
+</div>
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    // Backend Booking.Status choices: PENDING_PAYMENT, PENDING_DOCTOR, CONFIRMED, CANCELLED, COMPLETED
+    function statusClass(status) {
+        if (status === 'CONFIRMED') return 'status-approved';
+        if (status === 'CANCELLED') return 'status-cancelled';
+        if (status === 'COMPLETED') return 'status-completed';
+        return 'status-pending'; // PENDING_PAYMENT, PENDING_DOCTOR
+    }
+
+    function renderAppointments(appointments) {
+        const list = document.getElementById('appointmentsList');
+
+        list.innerHTML = appointments.map(appt => `
+        <div class="appointment-row" data-id="${appt.id}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <strong>${appt.doctor_name}</strong><br>
+                    <span class="text-muted">${appt.appointment_date} at ${appt.appointment_time}</span>
+                </div>
+                <span class="status-badge ${statusClass(appt.status)}">${appt.status_display}</span>
+            </div>
+            ${(appt.status === 'PENDING_PAYMENT' || appt.status === 'PENDING_DOCTOR' || appt.status === 'CONFIRMED') ? `
+                <div class="mt-3">
+                    ${appt.status === 'PENDING_PAYMENT' ? `<button class="btn btn-teal btn-sm w-100 pay-btn" data-id="${appt.id}">Pay Now</button>`: ''}
+                    <button class="btn btn-outline-danger btn-sm w-100 cancel-btn" data-id="${appt.id}">Cancel Appointment</button>
+                </div>
+                <div class="text-danger mt-2 action-error" style="display:none;"></div>
+            ` : ''}
+        </div>
+        `).join('');
+
+        document.querySelectorAll('.pay-btn').forEach(btn => {
+            btn.addEventListener('click', () => initializePayment(btn.getAttribute('data-id')));
+        });
+
+        document.querySelectorAll('.cancel-btn').forEach(btn => {
+            btn.addEventListener('click', () => cancelBooking(btn.getAttribute('data-id')));
+        });
+    }
+
+    async function loadAppointments() {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/bookings/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch appointments');
+            }
+
+            const data = await response.json();
+            document.getElementById('loadingState').style.display = 'none';
+
+            const results = data.bookings || data.results || data;
+
+            if (results.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+            } else {
+                renderAppointments(results);
+            }
+
+        } catch (error) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            console.error(error);
+        }
+    }
+
+    async function initializePayment(bookingId) {
+        const errorBox = document.querySelector(`.appointment-row[data-id="${bookingId}"] .action-error`);
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/payments/initialize/',{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ booking: bookingId})
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.payment || !data.payment.access_code) {
+                if (errorBox) {
+                    errorBox.textContent = JSON.stringify(data);
+                    errorBox.style.display = 'block';
+                }
+                return;
+            }
+
+            const accessCode = data.payment.access_code;
+            const reference = data.payment.reference;
+
+            const popup = new PaystackPop();
+
+            popup.resumeTransaction(accessCode, {
+
+                onSuccess: (transaction) => {
+                    verifyPayment(reference, bookingId);
+                },
+
+                onCancel: () => {
+                    if (errorBox) {
+                        errorBox.textContent = 'Payment was cancelled.';
+                        errorBox.style.display = 'block';
+                    }
+                },
+
+                onError: (error) => {
+                    if (errorBox) {
+                        errorBox.textContent = 'Payment error: ' + (error.message || 'Something went wrong.');
+                        errorBox.style.display = 'block';
+                    }
+                }
+
+            });
+
+        } catch (error) {
+            console.error(error);
+            if (errorBox) {
+                errorBox.textContent = 'Network error: could not reach the server';
+                errorBox.style.display = 'block';
+            }
+        }
+    }
+
+    async function verifyPayment(reference, bookingId) {
+        const errorBox = document.querySelector(`.appointment-row[data-id="${bookingId}"] .action-error`);
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/payments/verify/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ reference: reference })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                loadAppointments();
+            } else {
+                if (errorBox) {
+                    errorBox.textContent = JSON.stringify(data);
+                    errorBox.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            if (errorBox) {
+                errorBox.textContent = 'Payment succeeded but verification failed to reach the server. Please refresh.';
+                errorBox.style.display = 'block';
+            }
+        }
+    }
+
+    async function cancelBooking(id) {
+        openCancelModal(id);
+    }
+
+    let cancelTargetId = null;
+
+    function openCancelModal(id) {
+        cancelTargetId = id;
+        document.getElementById('cancelReasonInput').value = '';
+        document.getElementById('cancelReasonError').style.display = 'none';
+        document.getElementById('cancelModalBackdrop').classList.add('open');
+    }
+
+    function closeCancelModal() {
+        cancelTargetId = null;
+        document.getElementById('cancelModalBackdrop').classList.remove('open');
+    }
+
+    document.getElementById('cancelModalDismiss').addEventListener('click', closeCancelModal);
+
+    document.getElementById('cancelModalConfirm').addEventListener('click', async () => {
+        const reason = document.getElementById('cancelReasonInput').value.trim();
+        const errorEl = document.getElementById('cancelReasonError');
+
+        if (!reason) {
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        errorEl.style.display = 'none';
+        const id = cancelTargetId;
+        closeCancelModal();
+
+        const errorBox = document.querySelector(`.appointment-row[data-id="${id}"] .action-error`);
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/bookings/${id}/cancel/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason: reason })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                loadAppointments();
+            } else {
+                if (errorBox) {
+                    errorBox.textContent = JSON.stringify(data);
+                    errorBox.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            if (errorBox) {
+                errorBox.textContent = 'Network error: could not reach the server';
+                errorBox.style.display = 'block';
+            }
+        }
+    });
+
+    loadAppointments();
+</script>
+</body>
+</html>

@@ -1,0 +1,450 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Doctor Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+        .detail-card {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+        .doctor-name {
+            font-weight: 700;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-label {
+            color: #777;
+            font-size: 14px;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #222;
+        }
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .status-inactive {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        .status-active {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .modal-backdrop-custom {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-backdrop-custom.open {
+            display: flex;
+        }
+        .deactivate-modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Doctor Details</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'admin_dashboard' %}" class="sidebar-link">Dashboard</a>
+            <a href="{% url 'admin_doctor_management' %}" class="sidebar-link active">Manage Doctors</a>
+            <a href="{% url 'admin_patient_management' %}" class="sidebar-link">Manage Patients</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+<div class="detail-card">
+    <div class="text-center" id="loadingState">
+        <p class="text-muted">Loading doctor details...</p>
+    </div>
+
+    <div id="detailContent" style="display:none;">
+        <div class="text-center mb-3">
+            <h2 class="doctor-name mb-2" id="doctorName"></h2>
+            <span class="status-badge" id="verificationStatusBadge"></span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value" id="email"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Phone Number</span>
+            <span class="info-value" id="phoneNumber"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">ID Number</span>
+            <span class="info-value" id="idNumber"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Specialization</span>
+            <span class="info-value" id="specialization"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Qualification</span>
+            <span class="info-value" id="qualification"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Medical Registration</span>
+            <span class="info-value" id="medicalRegNumber"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Years of Experience</span>
+            <span class="info-value" id="yearsExperience"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Consultation Fee</span>
+            <span class="info-value" id="consultationFee"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Verification Reason</span>
+            <span class="info-value" id="verificationReason"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Verified At</span>
+            <span class="info-value" id="verifiedAt"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Account Verified</span>
+            <span class="info-value" id="isVerified"></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Account Status</span>
+            <span class="info-value"><span class="status-badge" id="activeStatusBadge"></span></span>
+        </div>
+        <div class="info-row" id="deactivationReasonRow" style="display:none;">
+            <span class="info-label">Deactivation Reason</span>
+            <span class="info-value" id="deactivationReason"></span>
+        </div>
+
+        <div class="text-center mt-4" id="statusActionArea"></div>
+    </div>
+
+    <div id="errorState" style="display:none;" class="text-center text-danger">
+        Could not load doctor details. Please try again later.
+    </div>
+</div>
+    </div>
+
+<div class="modal-backdrop-custom" id="deactivateModalBackdrop">
+    <div class="deactivate-modal">
+        <h5 class="mb-3">Deactivate Doctor Account</h5>
+        <p class="text-muted mb-3">Please provide a reason for deactivating this account.</p>
+        <textarea id="deactivateReasonInput" class="form-control mb-2" rows="3" placeholder="e.g. Violation of platform policy"></textarea>
+        <div class="text-danger mb-2" id="deactivateReasonError" style="display:none;">A deactivation reason is required.</div>
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary w-100" id="deactivateModalDismiss">Cancel</button>
+            <button type="button" class="btn btn-outline-danger w-100" id="deactivateModalConfirm">Confirm Deactivation</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+    const doctorId = window.location.pathname.split('/').filter(Boolean).pop();
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    function statusClass(status) {
+        if (status === 'APPROVED') return 'status-approved';
+        if (status === 'REJECTED') return 'status-rejected';
+        return 'status-pending';
+    }
+
+    async function loadDoctorDetail() {
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${doctorId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch doctor details');
+            }
+
+            const data = await response.json();
+
+            document.getElementById('doctorName').textContent = `Dr. ${data.first_name} ${data.last_name}`;
+
+            const badge = document.getElementById('verificationStatusBadge');
+            badge.textContent = data.verification_status;
+            badge.className = `status-badge ${statusClass(data.verification_status)}`;
+
+            document.getElementById('email').textContent = data.email;
+            document.getElementById('phoneNumber').textContent = data.phone_number;
+            document.getElementById('idNumber').textContent = data.id_number;
+            document.getElementById('specialization').textContent = data.specialization;
+            document.getElementById('qualification').textContent = data.qualification;
+            document.getElementById('medicalRegNumber').textContent = data.medical_registration_number;
+            document.getElementById('yearsExperience').textContent = `${data.years_of_experience} years`;
+            document.getElementById('consultationFee').textContent = data.consultation_fee ? `R${data.consultation_fee}` : 'N/A';
+            document.getElementById('verificationReason').textContent = data.verification_reason || 'N/A';
+            document.getElementById('verifiedAt').textContent = data.verified_at || 'N/A';
+            document.getElementById('isVerified').textContent = data.is_verified ? 'Yes' : 'No';
+
+            const activeBadge = document.getElementById('activeStatusBadge');
+            activeBadge.textContent = data.is_active ? 'ACTIVE' : 'INACTIVE';
+            activeBadge.className = `status-badge ${data.is_active ? 'status-active' : 'status-inactive'}`;
+
+            const reasonRow = document.getElementById('deactivationReasonRow');
+            if (!data.is_active && data.deactivation_reason) {
+                document.getElementById('deactivationReason').textContent = data.deactivation_reason;
+                reasonRow.style.display = 'flex';
+            } else {
+                reasonRow.style.display = 'none';
+            }
+
+            const actionArea = document.getElementById('statusActionArea');
+            actionArea.innerHTML = data.is_active
+                ? `<button class="btn btn-outline-danger" id="deactivateBtn">Deactivate Account</button>`
+                : `<button class="btn btn-outline-secondary" id="activateBtn">Reactivate Account</button>`;
+
+            if (data.is_active) {
+                document.getElementById('deactivateBtn').addEventListener('click', openDeactivateModal);
+            } else {
+                document.getElementById('activateBtn').addEventListener('click', activateDoctor);
+            }
+
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('detailContent').style.display = 'block';
+
+        } catch (error) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            console.error(error);
+        }
+    }
+
+    function openDeactivateModal() {
+        document.getElementById('deactivateReasonInput').value = '';
+        document.getElementById('deactivateReasonError').style.display = 'none';
+        document.getElementById('deactivateModalBackdrop').classList.add('open');
+    }
+
+    function closeDeactivateModal() {
+        document.getElementById('deactivateModalBackdrop').classList.remove('open');
+    }
+
+    document.getElementById('deactivateModalDismiss').addEventListener('click', closeDeactivateModal);
+
+    document.getElementById('deactivateModalConfirm').addEventListener('click', async () => {
+        const reason = document.getElementById('deactivateReasonInput').value.trim();
+        const errorEl = document.getElementById('deactivateReasonError');
+
+        if (!reason) {
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        errorEl.style.display = 'none';
+        closeDeactivateModal();
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${doctorId}/deactivate/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason: reason })
+            });
+
+            if (response.ok) {
+                loadDoctorDetail();
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    });
+
+    async function activateDoctor() {
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/admin/doctors/${doctorId}/activate/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                loadDoctorDetail();
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    loadDoctorDetail();
+</script>
+</body>
+</html>

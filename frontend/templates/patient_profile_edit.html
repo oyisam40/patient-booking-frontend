@@ -1,0 +1,304 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Edit Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+        .edit-card {
+            max-width: 520px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Edit Profile</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'patient_profile' %}" class="sidebar-link active">Profile</a>
+            <a href="{% url 'patient_appointments' %}" class="sidebar-link">My Appointments</a>
+            <a href="{% url 'browse_doctors' %}" class="sidebar-link">Find a Doctor</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+<div class="edit-card">
+    <h1 class="h3 mb-4 text-center font-weight-normal">Edit Profile</h1>
+
+    <div class="text-center" id="loadingState">
+        <p class="text-muted">Loading current profile...</p>
+    </div>
+
+    <form novalidate id="editForm" style="display:none;">
+        <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" id="phoneNumber" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Home Address</label>
+            <input type="text" id="homeAddress" class="form-control" required>
+        </div>
+
+         <div class="mb-3">
+            <label class="form-label">Emergency Contact Name</label>
+            <input type="text" id="emergencyContactName" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Emergency Contact Number</label>
+            <input type="tel" id="emergencyContactNumber" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label d-block">Preferred Notification Method</label>
+            <div class="d-flex gap-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="notification_preference" id="notifyEmail" value="EMAIL">
+                    <label class="form-check-label" for="notifyEmail">Email</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="notification_preference" id="notifySMS" value="SMS">
+                    <label class="form-check-label" for="notifySMS">SMS</label>
+                </div>
+            </div>
+        </div>
+
+        <div id="saveError" class="text-danger mb-3" style="display:none;"></div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'patient_profile' %}" class="btn btn-outline-secondary w-100">Cancel</a>
+            <button type="submit" class="btn btn-teal w-100">Save Changes</button>
+        </div>
+    </form>
+
+    <div id="errorState" style="display:none;" class="text-center text-danger">
+        Could not load profile. Please try again later.
+    </div>
+</div>
+    </div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+    const editForm = document.getElementById('editForm');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    async function loadCurrentProfile() {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/profiles/patient/me/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch profile');
+            }
+
+            const data = await response.json();
+
+            document.getElementById('phoneNumber').value = data.phone_number || '';
+            document.getElementById('homeAddress').value = data.address || '';
+            document.getElementById('emergencyContactName').value = data.emergency_contact_name || '';
+            document.getElementById('emergencyContactNumber').value = data.emergency_contact_phone || '';
+
+            if (data.verification_method === 'SMS') {
+                document.getElementById('notifySMS').checked = true;
+            } else {
+                document.getElementById('notifyEmail').checked = true;
+            }
+
+            document.getElementById('loadingState').style.display = 'none';
+            editForm.style.display = 'block';
+        } catch (error) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            console.error(error);
+        }
+    }
+
+    editForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        if (!editForm.checkValidity()) {
+            editForm.classList.add('was-validated');
+            return;
+        }
+
+        const payload = {
+            phone_number: document.getElementById('phoneNumber').value,
+            address: document.getElementById('homeAddress').value,
+            emergency_contact_name: document.getElementById('emergencyContactName').value,
+            emergency_contact_phone: document.getElementById('emergencyContactNumber').value,
+            verification_method: document.querySelector('input[name="notification_preference"]:checked').value
+        };
+
+        const saveError = document.getElementById('saveError');
+        saveError.style.display = 'none';
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/profiles/patient/me/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                window.location.href ="{% url 'patient_profile' %}"
+            } else {
+                saveError.textContent = JSON.stringify(data);
+                saveError.style.display = 'block';
+            }
+        } catch (error) {
+            saveError.textContent = "Network error: could not reach the server";
+            saveError.style.display = 'block';
+        }
+    });
+
+    loadCurrentProfile();
+</script>
+</body>
+</html>

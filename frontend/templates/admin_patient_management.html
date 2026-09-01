@@ -1,0 +1,401 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Manage Patient</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+        .management-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .page-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+        .patient-row {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+        }
+        .patient-row:last-child {
+            margin-bottom: 0;
+        }
+        .patient-name {
+            font-weight: 700;
+        }
+        .patient-email {
+            color: #777;
+            font-size: 14px;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-inactive {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        .status-active {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+        .modal-backdrop-custom {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-backdrop-custom.open {
+            display: flex;
+        }
+        .deactivate-modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Manage Patients</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'admin_dashboard' %}" class="sidebar-link">Dashboard</a>
+            <a href="{% url 'admin_doctor_management' %}" class="sidebar-link">Manage Doctors</a>
+            <a href="{% url 'admin_patient_management' %}" class="sidebar-link active">Manage Patients</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+<div class="management-container">
+<div class="page-card">
+    <h1 class="h3 mb-4 text-center font-weight-normal">Manage Patients</h1>
+
+    <div class="text-center" id="loadingState">
+        <p class="text-muted">Loading patients...</p>
+    </div>
+
+    <div id="emptyState" class="text-center text-muted" style="display:none;">
+        <p>No patients found</p>
+    </div>
+
+    <div id="errorState" class="text-center text-danger" style="display:none;">
+        Could not load patients. Please try again later.
+    </div>
+
+    <div id="patientList"></div>
+</div>
+</div>
+    </div>
+
+<div class="modal-backdrop-custom" id="deactivateModalBackdrop">
+    <div class="deactivate-modal">
+        <h5 class="mb-3">Deactivate Patient Account</h5>
+        <p class="text-muted mb-3">Please provide a reason for deactivating this account.</p>
+        <textarea id="deactivateReasonInput" class="form-control mb-2" rows="3" placeholder="e.g. Violation of platform policy"></textarea>
+        <div class="text-danger mb-2" id="deactivateReasonError" style="display:none;">A deactivation reason is required.</div>
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary w-100" id="deactivateModalDismiss">Cancel</button>
+            <button type="button" class="btn btn-outline-danger w-100" id="deactivateModalConfirm">Confirm Deactivation</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    async function loadPatients() {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/admin/patients/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch patients');
+            }
+
+            const data = await response.json();
+            document.getElementById('loadingState').style.display = 'none';
+
+            const results = data.patients || data.results || data;
+
+            if (results.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+            } else {
+                renderPatients(results);
+            }
+        } catch (error) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            console.error(error);
+        }
+    }
+
+     function renderPatients(patients) {
+        const list = document.getElementById('patientList');
+
+        list.innerHTML = patients.map(patient => `
+        <div class="patient-row" data-id="${patient.id}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <div class="patient-name">${patient.first_name} ${patient.last_name}</div>
+                    <div class="patient-email">${patient.email}</div>
+                </div>
+                <div class="text-end">
+                    <span class="status-badge ${patient.is_active ? 'status-active' : 'status-inactive'}">${patient.is_active ? 'ACTIVE' : 'INACTIVE'}</span><br>
+                    <a href="/admin-patients/${patient.id}/" class="btn btn-teal btn-sm mt-2">View Details</a><br>
+                    ${patient.is_active
+                        ? `<button class="btn btn-outline-danger btn-sm mt-2 deactivate-btn" data-id="${patient.id}">Deactivate</button>`
+                        : `<button class="btn btn-outline-secondary btn-sm mt-2 activate-btn" data-id="${patient.id}">Reactivate</button>`
+                    }
+                </div>
+            </div>
+            <div class="text-danger mt-2 action-error" style="display:none;"></div>
+        </div>
+        `).join('');
+
+        document.querySelectorAll('.deactivate-btn').forEach(btn => {
+            btn.addEventListener('click', () => openDeactivateModal(btn.getAttribute('data-id')));
+        });
+        document.querySelectorAll('.activate-btn').forEach(btn => {
+            btn.addEventListener('click', () => activatePatient(btn.getAttribute('data-id')));
+        });
+    }
+
+    let deactivateTargetId = null;
+
+    function openDeactivateModal(id) {
+        deactivateTargetId = id;
+        document.getElementById('deactivateReasonInput').value = '';
+        document.getElementById('deactivateReasonError').style.display = 'none';
+        document.getElementById('deactivateModalBackdrop').classList.add('open');
+    }
+
+    function closeDeactivateModal() {
+        deactivateTargetId = null;
+        document.getElementById('deactivateModalBackdrop').classList.remove('open');
+    }
+
+    document.getElementById('deactivateModalDismiss').addEventListener('click', closeDeactivateModal);
+
+    document.getElementById('deactivateModalConfirm').addEventListener('click', async () => {
+        const reason = document.getElementById('deactivateReasonInput').value.trim();
+        const errorEl = document.getElementById('deactivateReasonError');
+
+        if (!reason) {
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        errorEl.style.display = 'none';
+        const id = deactivateTargetId;
+        closeDeactivateModal();
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/admin/patients/${id}/deactivate/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason: reason })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                loadPatients();
+            } else {
+                const card = document.querySelector(`.patient-row[data-id="${id}"] .action-error`);
+                if (card) {
+                    card.textContent = JSON.stringify(data);
+                    card.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    });
+
+    async function activatePatient(id) {
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/admin/patients/${id}/activate/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                loadPatients();
+            } else {
+                const card = document.querySelector(`.patient-row[data-id="${id}"] .action-error`);
+                if (card) {
+                    card.textContent = JSON.stringify(data);
+                    card.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    loadPatients();
+</script>
+</body>
+</html>

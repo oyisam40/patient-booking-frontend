@@ -1,0 +1,115 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Verify Account</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bg {
+            animation: slide 3s ease-in-out infinite alternate;
+            background-image: linear-gradient(-60deg, #1B9AAA 50%, #4FD1C5 50%);
+            bottom: 0;
+            left: -50%;
+            opacity: .5;
+            position: fixed;
+            right: -50%;
+            top: 0;
+            z-index: -1;
+        }
+        .bg2 { animation-direction: alternate-reverse; animation-duration: 5s; }
+        .bg3 { animation-duration: 6s; }
+        @keyframes slide {
+            0% { transform: translateX(-25%); }
+            100% { transform: translateX(25%); }
+        }
+        body { min-height: 100vh; }
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+        .forgot-link { color: #1B9AAA; text-decoration: none; }
+        .forgot-link:hover { color: #16808f; text-decoration: underline; }
+        input[type="text"] { border-radius: 0.375rem; }
+    </style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div class="bg bg2"></div>
+<div class="bg bg3"></div>
+
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
+        <div class="card" style="max-width: 480px; width: 100%; margin: 1rem; box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.25);">
+            <p class="text-muted mb-3">Verifying: <strong id="displayEmail"></strong></p>
+
+            <div class="card-body p-4 text-center">
+                <img class="mt-4 mb-4" src="{% static 'images/Doconnect.jpg' %}" height="115" alt="DoConnect Logo">
+
+                <h1 class="h3 mb-3 font-weight-normal">Verify Your Account</h1>
+                <p class="text-muted mb-4">Enter the 6-digit code we emailed you. It expires in 5 minutes.</p>
+
+                <form novalidate>
+                    <div class="mb-4">
+                        <input type="text" id="otpCode" class="form-control mx-auto text-center" style="max-width: 320px; letter-spacing: 0.5em;" placeholder="000000" maxlength="6" pattern="\d{6}" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <button class="btn btn-teal mx-auto d-block" style="max-width: 320px; width: 100%;">Verify</button>
+                    </div>
+
+                    <div class="mb-2">
+                        <a href="#" id="resendOtp" class="forgot-link">Resend code</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const verifyForm = document.querySelector('form');
+        const storedEmail = sessionStorage.getItem('pendingVerificationEmail');
+        document.getElementById('displayEmail').textContent = storedEmail;
+
+        verifyForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            if (!verifyForm.checkValidity()) {
+                verifyForm.classList.add('was-validated');
+                return;
+            }
+
+            const payload = {
+                email: storedEmail,
+                otp: document.getElementById('otpCode').value,
+                verification_method: "EMAIL"
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/verify-otp/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    sessionStorage.removeItem('pendingVerificationEmail');
+                    window.location.href = "{% url 'user_verify' %}";
+                } else {
+                    alert(JSON.stringify(data));
+                }
+            } catch (error) {
+                alert("Network error: could not reach the server");
+            }
+        });
+    </script>
+</body>
+</html>
