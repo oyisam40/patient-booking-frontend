@@ -76,41 +76,70 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const verifyForm = document.querySelector('form');
-        const storedEmail = sessionStorage.getItem('pendingVerificationEmail');
-        document.getElementById('displayEmail').textContent = storedEmail;
+    const verifyForm = document.querySelector('form');
+    const storedEmail = sessionStorage.getItem('pendingVerificationEmail');
+    document.getElementById('displayEmail').textContent = storedEmail;
 
-        verifyForm.addEventListener('submit', async function (event) {
-            event.preventDefault();
-            if (!verifyForm.checkValidity()) {
-                verifyForm.classList.add('was-validated');
-                return;
+    verifyForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (!verifyForm.checkValidity()) {
+            verifyForm.classList.add('was-validated');
+            return;
+        }
+
+        const payload = {
+            email: storedEmail,
+            otp: document.getElementById('otpCode').value,
+            verification_method: "EMAIL"
+        };
+
+        try {
+            const response = await fetch(API_BASE_URL + '/api/auth/verify-otp/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                sessionStorage.removeItem('pendingVerificationEmail');
+                window.location.href = "{% url 'user_verify' %}";
+            } else {
+                alert(JSON.stringify(data));
             }
+        } catch (error) {
+            alert("Network error: could not reach the server");
+        }
+    });
 
-            const payload = {
-                email: storedEmail,
-                otp: document.getElementById('otpCode').value,
-                verification_method: "EMAIL"
-            };
+    const resendLink = document.getElementById('resendOtp');
+    resendLink.addEventListener('click', async function (event) {
+        event.preventDefault();
 
-            try {
-                const response = await fetch(API_BASE_URL + '/api/auth/verify-otp/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+        resendLink.classList.add('disabled');
+        const originalText = resendLink.textContent;
+        resendLink.textContent = 'Sending...';
 
-                const data = await response.json();
-                if (response.ok) {
-                    sessionStorage.removeItem('pendingVerificationEmail');
-                    window.location.href = "{% url 'user_verify' %}";
-                } else {
-                    alert(JSON.stringify(data));
-                }
-            } catch (error) {
-                alert("Network error: could not reach the server");
+        try {
+            const response = await fetch(API_BASE_URL + '/api/auth/resend-otp/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: storedEmail, verification_method: "EMAIL" })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert('A new code has been sent to your email.');
+            } else {
+                alert(JSON.stringify(data));
             }
-        });
-    </script>
+        } catch (error) {
+            alert("Network error: could not reach the server");
+        } finally {
+            resendLink.classList.remove('disabled');
+            resendLink.textContent = originalText;
+        }
+    });
+</script>
 </body>
 </html>

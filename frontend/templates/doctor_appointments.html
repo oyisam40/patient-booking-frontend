@@ -480,6 +480,21 @@
                 return;
             }
 
+            // =========================================================
+            // TEMP DEMO PATH — open the real Jitsi URL directly
+            //
+            // Instead of embedding the call in an iframe via
+            // JitsiMeetExternalAPI, this opens the actual room URL
+            // (with the signed JWT attached as a query param) in a
+            // new tab, so the token and room are visible in the
+            // browser address bar for demonstration purposes.
+            //
+            // This bypasses the in-app "Leave Call" overlay and the
+            // toggleLobby command below it — revert to the
+            // JitsiMeetExternalAPI embed for normal use once the
+            // demo is done.
+            // =========================================================
+
             await loadJitsiScript(data.domain);
 
             const options = {
@@ -498,9 +513,33 @@
             jitsiApi.addListener('videoConferenceLeft', closeVideoCall);
             jitsiApi.addListener('readyToClose', closeVideoCall);
 
+            // =========================================================
+            // ENABLE LOBBY ON videoConferenceJoined
+            //
+            // mod_muc_lobby_rooms enables lobby by having the room's
+            // owner submit a muc#roomconfig_membersonly config change.
+            // Prosody's core MUC layer gates who's allowed to submit
+            // that change based on the client's already-recognized
+            // affiliation — so toggleLobby needs to fire *after* the
+            // doctor's presence has reached the room and been granted
+            // owner affiliation (via mod_token_moderation.lua's
+            // setupAffiliation), not before the connection even opens.
+            //
+            // An earlier version fired this immediately after the
+            // JitsiMeetExternalAPI instance was constructed, aiming to
+            // narrow the join-race window — but that's very likely
+            // too early for the client to have registered itself as
+            // moderator yet, causing the command to be silently
+            // ignored. Waiting for videoConferenceJoined re-opens a
+            // small window where a patient could theoretically join
+            // before lobby activates — the real fix for that is
+            // enabling lobby server-side at room creation, not
+            // tuning this client-side timing further.
+            // =========================================================
+
             if (data.is_moderator) {
                 jitsiApi.addListener('videoConferenceJoined', () => {
-                    jitsiApi.executeCommand('toggleLobby', true)
+                    jitsiApi.executeCommand('toggleLobby', true);
                 });
             }
 
