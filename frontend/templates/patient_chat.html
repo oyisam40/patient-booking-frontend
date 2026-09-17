@@ -1,0 +1,609 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Messages</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 24px;
+            transition: margin-left 0.3s ease;
+            height: calc(100vh - 60px);
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+
+        .chat-shell {
+            max-width: 1000px;
+            margin: 0 auto;
+            height: 100%;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            display: flex;
+            overflow: hidden;
+        }
+
+        .conversation-list {
+            width: 300px;
+            border-right: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .conversation-list-header {
+            padding: 20px;
+            font-weight: 700;
+            border-bottom: 1px solid #eee;
+        }
+
+        .conversation-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid #f4f4f4;
+            cursor: pointer;
+        }
+
+        .conversation-item:hover {
+            background: #f4fbfb;
+        }
+
+        .conversation-item.active {
+            background: #eafaf9;
+            border-left: 3px solid #1B9AAA;
+        }
+
+        .conversation-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .conversation-preview {
+            font-size: 13px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .thread-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .thread-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #eee;
+            font-weight: 700;
+        }
+
+        .thread-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message-bubble.outgoing {
+            align-self: flex-end;
+            background: #1B9AAA;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.incoming {
+            align-self: flex-start;
+            background: #f0f0f0;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-meta {
+            font-size: 11px;
+            margin-top: 4px;
+            opacity: 0.75;
+        }
+
+        .message-bubble.outgoing .message-meta {
+            text-align: right;
+        }
+
+        .thread-input-row {
+            border-top: 1px solid #eee;
+            padding: 14px 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .thread-input-row input {
+            flex: 1;
+            border-radius: 20px;
+        }
+
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+
+        .empty-thread-state {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading-state {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+    </style>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Messages</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'patient_profile' %}" class="sidebar-link">Profile</a>
+            <a href="{% url 'patient_appointments' %}" class="sidebar-link">My Appointments</a>
+            <a href="{% url 'symptom_checker' %}" class="sidebar-link">Symptom Checker</a>
+            <a href="{% url 'browse_doctors' %}" class="sidebar-link">Find a Doctor</a>
+            <a href="{% url 'patient_chat' %}" class="sidebar-link active">Messages</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+        <div class="chat-shell">
+            <div class="conversation-list" id="conversationList">
+                <div class="conversation-list-header">Conversations</div>
+                <div class="loading-state" id="conversationsLoadingState">Loading...</div>
+            </div>
+
+            <div class="thread-panel" id="threadPanel">
+                <div class="empty-thread-state" id="emptyThreadState">
+                    Select a conversation to start messaging
+                </div>
+
+                <div id="activeThread" style="display:none; flex-direction:column; flex:1;">
+                    <div class="thread-header" id="threadHeader"></div>
+                    <div class="thread-messages" id="threadMessages"></div>
+                    <div class="thread-input-row">
+                        <input type="text" id="messageInput" class="form-control" placeholder="Type a message...">
+                        <button type="button" class="btn btn-teal" id="sendMessageBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    // =========================================================
+    // CONFIRMED FROM NTSAKO
+    //
+    //   POST /api/conversations/        body: { booking: <id> }
+    //     -> creates/resumes a conversation for a CONFIRMED booking
+    //
+    //   GET  /api/conversations/
+    //     -> list of the logged-in user's conversations
+    //
+    //   GET  /api/conversations/{id}/messages/
+    //   POST /api/conversations/{id}/messages/   body: { content: "..." }
+    //
+    // STILL UNCONFIRMED (guessed below, flagged inline):
+    //   - exact field name for "the other participant" on a
+    //     conversation object — guessing "doctor_name", matching
+    //     his naming convention elsewhere (RecommendedDoctorSerializer,
+    //     verification's doctor_name/doctor_email)
+    //   - exact field names on a message object — guessing "id",
+    //     "content", "sender" (assumed to be the sender's user id),
+    //     "created_at"
+    //   - whether single-resource responses (e.g. the create/resume
+    //     call) are wrapped like verification's { "application": {...} }
+    //     pattern — handling both shapes defensively below, since
+    //     we've now seen that wrapping convention twice
+    //   - NO status field (sent/delivered/read) appears anywhere in
+    //     the given spec, despite that being an explicit requirement.
+    //     Rendering it only if present; asked Ntsako directly.
+    // =========================================================
+
+    // CONFIRMED from real message response:
+    //   { id, conversation, sender (numeric user id), sender_name,
+    //     content, is_read (boolean), created_at }
+    // — "sender" is a plain number as guessed, and there's no
+    // multi-state status, just a simple is_read boolean.
+    //
+    // FIXED (round 2) — the /me/ endpoint's "id" turned out to be
+    // the PatientProfile/DoctorProfile's own primary key, NOT the
+    // underlying User id that "sender" actually refers to (e.g.
+    // doctor Lebo Rantao is User id 5, but /me/ returned id 2 — his
+    // DoctorProfile's own PK, a completely different number).
+    //
+    // Decoding the JWT access token instead: Django's SimpleJWT
+    // embeds a "user_id" claim directly in the token payload — the
+    // exact same id Django resolves request.user to server-side —
+    // so this is guaranteed correct with no backend round-trip.
+    function getUserIdFromToken(rawToken) {
+        try {
+            const payload = rawToken.split('.')[1];
+            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            return decoded.user_id;
+        } catch (error) {
+            console.error('Could not decode access token', error);
+            return null;
+        }
+    }
+
+    const CURRENT_USER_ID = getUserIdFromToken(token);
+
+    let conversations = [];
+    let currentConversationId = null;
+    let pollIntervalId = null;
+
+    // =========================================================
+    // LOAD CONVERSATIONS
+    // =========================================================
+
+    async function loadConversations() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/conversations/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load conversations');
+            }
+
+            const data = await response.json();
+            conversations = data.conversations || data.results || data;
+
+            const loadingEl = document.getElementById('conversationsLoadingState');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+
+            renderConversationList();
+
+            // If we arrived here from a booking's "Message" button,
+            // the URL will carry ?conversation=<id> — open it directly.
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetConversationId = urlParams.get('conversation');
+            if (targetConversationId) {
+                openConversation(parseInt(targetConversationId, 10));
+            }
+
+        } catch (error) {
+            console.error(error);
+            const loadingEl = document.getElementById('conversationsLoadingState');
+            if (loadingEl) {
+                loadingEl.textContent = 'Could not load conversations.';
+            }
+        }
+    }
+
+    // FIXED — this was rendering "[object Object]" because
+    // last_message (or last_message_preview) is apparently a
+    // nested message object, not a plain string. Extracting its
+    // .content field when that's the case.
+    function getPreviewText(conv) {
+        const lm = conv.last_message || conv.last_message_preview;
+        if (!lm) return '';
+        if (typeof lm === 'string') return lm;
+        return lm.content || '';
+    }
+
+    function renderConversationList() {
+        const list = document.getElementById('conversationList');
+        const header = list.querySelector('.conversation-list-header');
+        list.innerHTML = '';
+        list.appendChild(header);
+
+        if (conversations.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'loading-state';
+            empty.textContent = 'No conversations yet.';
+            list.appendChild(empty);
+            return;
+        }
+
+        conversations.forEach(conv => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item' + (conv.id === currentConversationId ? ' active' : '');
+
+            const otherName = conv.doctor_name || conv.patient_name || 'Conversation';
+            const preview = getPreviewText(conv);
+
+            item.innerHTML = `
+                <div class="conversation-name">${otherName}</div>
+                <div class="conversation-preview">${preview}</div>
+            `;
+
+            item.addEventListener('click', () => openConversation(conv.id));
+            list.appendChild(item);
+        });
+    }
+
+    // =========================================================
+    // OPEN A CONVERSATION
+    // =========================================================
+
+    function openConversation(conversationId) {
+        currentConversationId = conversationId;
+
+        document.getElementById('emptyThreadState').style.display = 'none';
+        document.getElementById('activeThread').style.display = 'flex';
+
+        const conversation = conversations.find(c => c.id === conversationId);
+        const otherName = conversation
+            ? (conversation.doctor_name || conversation.patient_name || 'Conversation')
+            : 'Conversation';
+        document.getElementById('threadHeader').textContent = otherName;
+
+        renderConversationList();
+        loadMessages(conversationId);
+        startPolling(conversationId);
+    }
+
+    // =========================================================
+    // LOAD MESSAGES
+    // =========================================================
+
+    async function loadMessages(conversationId) {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/conversations/${conversationId}/messages/`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to load messages');
+            }
+
+            const data = await response.json();
+            const messages = data.messages || data.results || data;
+            renderMessages(messages);
+
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('threadMessages');
+
+        container.innerHTML = messages.map(msg => {
+            // CONFIRMED — sender is a plain numeric user id.
+            const senderId = msg.sender;
+            const isOutgoing = senderId === CURRENT_USER_ID;
+
+            const text = msg.content || '';
+            const timestamp = msg.created_at;
+
+            return `
+                <div class="message-bubble ${isOutgoing ? 'outgoing' : 'incoming'}">
+                    <div>${text}</div>
+                    <div class="message-meta">
+                        ${timestamp ? formatTime(timestamp) : ''}
+                        ${isOutgoing ? ' &middot; ' + (msg.is_read ? 'Read' : 'Sent') : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function formatTime(isoString) {
+        const d = new Date(isoString);
+        return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // =========================================================
+    // SEND A MESSAGE
+    // =========================================================
+
+    document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
+    document.getElementById('messageInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    async function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+
+        if (!text || !currentConversationId) {
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/conversations/${currentConversationId}/messages/`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ content: text })
+                }
+            );
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                alert(data.detail || 'Could not send message.');
+                return;
+            }
+
+            input.value = '';
+            await loadMessages(currentConversationId);
+
+        } catch (error) {
+            console.error(error);
+            alert('Network error: could not send the message.');
+        }
+    }
+
+    // =========================================================
+    // POLLING FOR NEW MESSAGES
+    // =========================================================
+
+    function startPolling(conversationId) {
+        if (pollIntervalId) {
+            clearInterval(pollIntervalId);
+        }
+
+        pollIntervalId = setInterval(() => {
+            if (currentConversationId === conversationId) {
+                loadMessages(conversationId);
+            }
+        }, 4000);
+    }
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    loadConversations();
+</script>
+</body>
+</html>

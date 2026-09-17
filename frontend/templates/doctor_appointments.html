@@ -232,6 +232,8 @@
             <a href="{% url 'doctor_profile' %}" class="sidebar-link">Profile</a>
             <a href="{% url 'doctor_availability' %}" class="sidebar-link">Set Availability</a>
             <a href="{% url 'doctor_appointments' %}" class="sidebar-link active">My Appointments</a>
+            <a href="{% url 'doctor_chat' %}" class="sidebar-link">Messages</a>
+            <a href="{% url 'doctor_documents' %}" class="sidebar-link">Verification Documents</a>
             <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
         </div>
         <div class="sidebar-footer">
@@ -327,6 +329,7 @@
                 ${appt.status === 'CONFIRMED' ? `
                     <div class="d-flex gap-2 mt-3">
                         <button class="btn btn-teal btn-sm w-100 video-call-btn" data-id="${appt.id}">Join Video Call</button>
+                        <button class="btn btn-outline-secondary btn-sm w-100 message-btn" data-id="${appt.id}">Message</button>
                         <button class="btn btn-outline-secondary btn-sm w-100 complete-btn" data-id="${appt.id}">Mark Completed</button>
                     </div>
         <div class="text-danger mt-2 action-error" style="display:none;"></div>
@@ -345,6 +348,9 @@
         });
         document.querySelectorAll('.video-call-btn').forEach(btn => {
             btn.addEventListener('click', () => joinVideoCall(btn.getAttribute('data-id')));
+        });
+        document.querySelectorAll('.message-btn').forEach(btn => {
+            btn.addEventListener('click', () => startConversation(btn.getAttribute('data-id')));
         });
     }
 
@@ -442,6 +448,49 @@
     }
 
     // =========================================================
+    // START / RESUME CONVERSATION
+    //
+    // Same pattern as the patient side — see patient_appointments.html
+    // for the full comment on confirmed/unconfirmed API details.
+    // =========================================================
+
+    async function startConversation(bookingId) {
+        const errorBox = document.querySelector(`.appointment-row[data-id="${bookingId}"] .action-error`);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/conversations/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ booking: parseInt(bookingId, 10) })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (errorBox) {
+                    errorBox.textContent = data.detail || 'Could not start the conversation.';
+                    errorBox.style.display = 'block';
+                }
+                return;
+            }
+
+            const conversation = data.conversation || data;
+
+            window.location.href = `{% url 'doctor_chat' %}?conversation=${conversation.id}`;
+
+        } catch (error) {
+            console.error(error);
+            if (errorBox) {
+                errorBox.textContent = 'Network error: could not start the conversation.';
+                errorBox.style.display = 'block';
+            }
+        }
+    }
+
+    // =========================================================
     // VIDEO CALL
     // =========================================================
 
@@ -480,21 +529,6 @@
                 return;
             }
 
-            // =========================================================
-            // TEMP DEMO PATH — open the real Jitsi URL directly
-            //
-            // Instead of embedding the call in an iframe via
-            // JitsiMeetExternalAPI, this opens the actual room URL
-            // (with the signed JWT attached as a query param) in a
-            // new tab, so the token and room are visible in the
-            // browser address bar for demonstration purposes.
-            //
-            // This bypasses the in-app "Leave Call" overlay and the
-            // toggleLobby command below it — revert to the
-            // JitsiMeetExternalAPI embed for normal use once the
-            // demo is done.
-            // =========================================================
-
             await loadJitsiScript(data.domain);
 
             const options = {
@@ -524,17 +558,6 @@
             // doctor's presence has reached the room and been granted
             // owner affiliation (via mod_token_moderation.lua's
             // setupAffiliation), not before the connection even opens.
-            //
-            // An earlier version fired this immediately after the
-            // JitsiMeetExternalAPI instance was constructed, aiming to
-            // narrow the join-race window — but that's very likely
-            // too early for the client to have registered itself as
-            // moderator yet, causing the command to be silently
-            // ignored. Waiting for videoConferenceJoined re-opens a
-            // small window where a patient could theoretically join
-            // before lobby activates — the real fix for that is
-            // enabling lobby server-side at room creation, not
-            // tuning this client-side timing further.
             // =========================================================
 
             if (data.is_moderator) {

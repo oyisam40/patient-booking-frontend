@@ -1,0 +1,738 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Verification Documents</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 24px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+
+        .page-card {
+            max-width: 760px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .status-tracker {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 36px;
+            position: relative;
+        }
+
+        .status-tracker::before {
+            content: '';
+            position: absolute;
+            top: 14px;
+            left: 5%;
+            right: 5%;
+            height: 2px;
+            background: #eee;
+            z-index: 0;
+        }
+
+        .status-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-step-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #eee;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 13px;
+            font-weight: 700;
+            border: 3px solid #fff;
+        }
+
+        .status-step.complete .status-step-dot {
+            background: #1B9AAA;
+            color: #fff;
+        }
+
+        .status-step.current .status-step-dot {
+            background: #fff;
+            color: #1B9AAA;
+            border-color: #1B9AAA;
+        }
+
+        .status-step.rejected .status-step-dot {
+            background: #c0392b;
+            color: #fff;
+        }
+
+        .status-step-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .status-step.complete .status-step-label,
+        .status-step.current .status-step-label {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .document-row {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .document-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .document-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .document-hint {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .document-status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .document-status-badge.missing {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .document-status-badge.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .document-status-badge.approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .document-status-badge.rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .document-rejection-reason {
+            font-size: 13px;
+            color: #c0392b;
+            margin-top: 4px;
+        }
+
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+        .btn-teal:disabled {
+            background-color: #8fc7ce;
+            border-color: #8fc7ce;
+        }
+
+        .submit-section {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #eee;
+        }
+
+        .file-input-hidden {
+            display: none;
+        }
+
+        .loading-state {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+    </style>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Verification Documents</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'doctor_profile' %}" class="sidebar-link">Profile</a>
+            <a href="{% url 'doctor_availability' %}" class="sidebar-link">Set Availability</a>
+            <a href="{% url 'doctor_appointments' %}" class="sidebar-link">My Appointments</a>
+            <a href="{% url 'doctor_chat' %}" class="sidebar-link">Messages</a>
+            <a href="{% url 'doctor_documents' %}" class="sidebar-link active">Verification Documents</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+        <div class="page-card">
+            <h1 class="h3 mb-2 text-center font-weight-normal">Verification Documents</h1>
+            <p class="text-muted text-center mb-4">
+                Upload the documents below so an admin can verify your account.
+            </p>
+
+            <div id="loadingState" class="loading-state">Loading your application...</div>
+
+            <div id="pageContent" style="display:none;">
+                <div class="status-tracker" id="statusTracker"></div>
+
+                <div id="rejectionBanner" class="alert alert-danger" style="display:none;"></div>
+
+                <div id="documentList"></div>
+
+                <div class="submit-section">
+                    <button type="button" class="btn btn-teal w-100" id="submitApplicationBtn" disabled>
+                        Submit for Review
+                    </button>
+                    <p class="text-muted text-center mt-2" style="font-size: 13px;" id="submitHint">
+                        Upload all required documents before submitting.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    // =========================================================
+    // CONFIRMED FROM NTSAKO
+    //
+    //   Base path: /api/verification/
+    //
+    //   POST /api/verification/applications/
+    //     -> creates a new application
+    //
+    //   GET /api/verification/applications/me/
+    //     -> the logged-in doctor's own application
+    //     ASSUMPTION: returns 404 if none exists yet (standard
+    //     REST convention) — if it instead returns 200 with an
+    //     empty/null body, the logic below needs a small tweak.
+    //
+    //   POST /api/verification/applications/{id}/documents/
+    //     multipart/form-data: document_type, file
+    //     ASSUMPTION: re-posting the same document_type after
+    //     it's already uploaded either replaces it or creates a
+    //     duplicate — unconfirmed, worth checking with Ntsako
+    //     before relying on "Replace" actually replacing anything.
+    //
+    //   POST /api/verification/applications/{id}/submit/
+    //
+    //   Confirmed document_type values:
+    //     ID_DOCUMENT | QUALIFICATION | MEDICAL_REGISTRATION
+    //
+    // STILL UNCONFIRMED (guessed below, flagged inline):
+    //   - exact field names inside a returned document object
+    //     (assuming: id, document_type, file, status,
+    //     rejection_reason)
+    //   - exact status string values (assuming uppercase
+    //     PENDING | APPROVED | REJECTED, to match the uppercase
+    //     document_type convention)
+    //   - exact application status values (assuming uppercase
+    //     DRAFT | SUBMITTED | UNDER_REVIEW | APPROVED | REJECTED)
+    // =========================================================
+
+    const REQUIRED_DOCUMENT_TYPES = [
+        {
+            type: 'ID_DOCUMENT',
+            display_name: 'ID Document',
+            hint: 'A clear photo or scan of your government-issued ID.',
+        },
+        {
+            type: 'QUALIFICATION',
+            display_name: 'Qualification Certificate',
+            hint: 'Your medical degree or diploma certificate.',
+        },
+        {
+            type: 'MEDICAL_REGISTRATION',
+            display_name: 'Medical Registration Proof',
+            hint: 'Proof of your medical registration number (e.g. HPCSA certificate).',
+        },
+    ];
+
+    const STATUS_STEPS = ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED'];
+
+    const MAX_FILE_SIZE_MB = 5;
+    const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+
+    let currentApplication = null;
+
+    // =========================================================
+    // LOAD OR CREATE THE APPLICATION
+    // =========================================================
+
+    async function initApplication() {
+        try {
+            let response = await fetch(`${API_BASE_URL}/api/verification/applications/me/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.status === 404) {
+                response = await fetch(`${API_BASE_URL}/api/verification/applications/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({})
+                });
+            }
+
+            if (!response.ok) {
+                throw new Error('Failed to load verification application');
+            }
+
+            const data = await response.json();
+
+            // CONFIRMED — the response nests the actual application
+            // under an "application" key, not at the top level.
+            // Also confirms doctor_name / doctor_email as the real
+            // field names for the applicant's info.
+            currentApplication = data.application || data;
+
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('pageContent').style.display = 'block';
+
+            renderAll();
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loadingState').textContent =
+                'Could not load your verification application. Please refresh and try again.';
+        }
+    }
+
+    async function refreshApplication() {
+        const response = await fetch(`${API_BASE_URL}/api/verification/applications/me/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            currentApplication = data.application || data;
+            renderAll();
+        }
+    }
+
+    // =========================================================
+    // RENDER STATUS TRACKER
+    // =========================================================
+
+    function renderStatusTracker() {
+        const tracker = document.getElementById('statusTracker');
+        const currentStatus = currentApplication.status;
+
+        if (currentStatus === 'REJECTED') {
+            tracker.innerHTML = STATUS_STEPS.map((step, index) => {
+                const label = step.replace('_', ' ');
+                const cssClass = index === 0 ? 'complete' : (index === 1 ? 'rejected' : '');
+                return `
+                    <div class="status-step ${cssClass}">
+                        <div class="status-step-dot">${index === 1 ? '&times;' : index + 1}</div>
+                        <div class="status-step-label">${capitalize(label)}</div>
+                    </div>
+                `;
+            }).join('');
+            return;
+        }
+
+        const currentIndex = STATUS_STEPS.indexOf(currentStatus);
+
+        tracker.innerHTML = STATUS_STEPS.map((step, index) => {
+            let cssClass = '';
+            if (index < currentIndex) cssClass = 'complete';
+            if (index === currentIndex) cssClass = 'current';
+
+            const label = step.replace('_', ' ');
+
+            return `
+                <div class="status-step ${cssClass}">
+                    <div class="status-step-dot">${index < currentIndex ? '&check;' : index + 1}</div>
+                    <div class="status-step-label">${capitalize(label)}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function capitalize(text) {
+        return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+    }
+
+    // =========================================================
+    // RENDER REJECTION BANNER
+    // =========================================================
+
+    function renderRejectionBanner() {
+        const banner = document.getElementById('rejectionBanner');
+
+        if (currentApplication.status === 'REJECTED') {
+            const rejectedDocs = (currentApplication.documents || []).filter(d => d.status === 'REJECTED');
+            const reasons = rejectedDocs
+                .map(d => `<strong>${labelForType(d.document_type)}:</strong> ${d.rejection_reason}`)
+                .join('<br>');
+
+            banner.innerHTML = `Your application was rejected. Please review and re-upload the flagged documents below.<br>${reasons}`;
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    function labelForType(type) {
+        const match = REQUIRED_DOCUMENT_TYPES.find(t => t.type === type);
+        return match ? match.display_name : type;
+    }
+
+    // CONFIRMED from Ntsako — a document type can now have multiple
+    // documents (e.g. an old REJECTED one and a newer PENDING
+    // replacement). The frontend must always use the LATEST one per
+    // type, not just the first match. Picking the latest by
+    // uploaded_at if present, falling back to the highest id.
+    function findUploadedDocument(type) {
+        const matches = (currentApplication.documents || []).filter(d => d.document_type === type);
+
+        if (matches.length === 0) {
+            return null;
+        }
+
+        return matches.reduce((latest, doc) => {
+            if (!latest) return doc;
+            const latestKey = latest.uploaded_at ? new Date(latest.uploaded_at).getTime() : latest.id;
+            const docKey = doc.uploaded_at ? new Date(doc.uploaded_at).getTime() : doc.id;
+            return docKey > latestKey ? doc : latest;
+        }, null);
+    }
+
+    // =========================================================
+    // RENDER DOCUMENT CHECKLIST
+    // =========================================================
+
+    function renderDocumentList() {
+        const container = document.getElementById('documentList');
+        const isLocked = ['SUBMITTED', 'UNDER_REVIEW', 'APPROVED'].includes(currentApplication.status);
+
+        // CONFIRMED from Ntsako — rejected documents are kept for
+        // history, not deleted, and uploading a replacement for the
+        // same document_type creates a new document that becomes
+        // the current/latest one (findUploadedDocument above already
+        // picks that latest one out). So "Replace" on a REJECTED
+        // document now works exactly like a normal upload.
+
+        container.innerHTML = REQUIRED_DOCUMENT_TYPES.map(reqDoc => {
+            const uploaded = findUploadedDocument(reqDoc.type);
+            const status = uploaded ? uploaded.status : 'MISSING';
+            const badgeClass = status.toLowerCase();
+
+            return `
+                <div class="document-row" data-type="${reqDoc.type}">
+                    <div style="flex:1;">
+                        <div class="document-name">${reqDoc.display_name}</div>
+                        <div class="document-hint">${uploaded ? 'Uploaded' : reqDoc.hint}</div>
+                        ${status === 'REJECTED' && uploaded.rejection_reason ? `
+                            <div class="document-rejection-reason">${uploaded.rejection_reason}</div>
+                        ` : ''}
+                    </div>
+
+                    <span class="document-status-badge ${badgeClass}">${status}</span>
+
+                    ${!isLocked || status === 'REJECTED' ? `
+                        <input type="file" class="file-input-hidden" id="fileInput-${reqDoc.type}" accept=".pdf,.jpg,.jpeg,.png">
+                        <button type="button" class="btn btn-outline-secondary btn-sm upload-btn" data-type="${reqDoc.type}">
+                            ${uploaded ? 'Replace' : 'Upload'}
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        document.querySelectorAll('.upload-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const type = this.getAttribute('data-type');
+                document.getElementById(`fileInput-${type}`).click();
+            });
+        });
+
+        document.querySelectorAll('.file-input-hidden').forEach(input => {
+            input.addEventListener('change', function () {
+                const type = this.id.replace('fileInput-', '');
+                if (this.files.length > 0) {
+                    handleFileSelected(type, this.files[0]);
+                }
+            });
+        });
+
+        updateSubmitButtonState();
+    }
+
+    // =========================================================
+    // HANDLE FILE SELECTION + UPLOAD
+    // =========================================================
+
+    async function handleFileSelected(documentType, file) {
+        const errorMessage = validateFile(file);
+
+        if (errorMessage) {
+            alert(errorMessage);
+            return;
+        }
+
+        const uploadBtn = document.querySelector(`.upload-btn[data-type="${documentType}"]`);
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('document_type', documentType);
+            formData.append('file', file);
+
+            const response = await fetch(
+                `${API_BASE_URL}/api/verification/applications/${currentApplication.id}/documents/`,
+                {
+                    method: 'POST',
+                    headers: {
+                        // No Content-Type header here — the browser sets the
+                        // correct multipart/form-data boundary automatically
+                        // when the body is a FormData object.
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                }
+            );
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                alert(data.detail || 'Upload failed. Please try again.');
+                return;
+            }
+
+            await refreshApplication();
+
+        } catch (error) {
+            console.error(error);
+            alert('Network error: could not upload the document.');
+        }
+    }
+
+    function validateFile(file) {
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            return 'Please upload a PDF, JPG, or PNG file.';
+        }
+
+        const fileSizeMB = file.size / (1024 * 1024);
+        if (fileSizeMB > MAX_FILE_SIZE_MB) {
+            return `File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`;
+        }
+
+        return null;
+    }
+
+    // =========================================================
+    // SUBMIT APPLICATION
+    // =========================================================
+
+    function updateSubmitButtonState() {
+        const submitBtn = document.getElementById('submitApplicationBtn');
+        const hint = document.getElementById('submitHint');
+
+        const allUploaded = REQUIRED_DOCUMENT_TYPES.every(reqDoc => findUploadedDocument(reqDoc.type));
+        const alreadySubmitted = ['SUBMITTED', 'UNDER_REVIEW', 'APPROVED'].includes(currentApplication.status);
+
+        if (alreadySubmitted) {
+            submitBtn.style.display = 'none';
+            hint.textContent = 'Your application has been submitted and is awaiting review.';
+            return;
+        }
+
+        submitBtn.style.display = 'block';
+        submitBtn.disabled = !allUploaded;
+        hint.textContent = allUploaded
+            ? 'All documents uploaded. Ready to submit.'
+            : 'Upload all required documents before submitting.';
+    }
+
+    document.getElementById('submitApplicationBtn').addEventListener('click', async function () {
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/verification/applications/${currentApplication.id}/submit/`,
+                {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                alert(data.detail || 'Could not submit application.');
+                return;
+            }
+
+            await refreshApplication();
+
+        } catch (error) {
+            console.error(error);
+            alert('Network error: could not submit the application.');
+        }
+    });
+
+    // =========================================================
+    // RENDER EVERYTHING
+    // =========================================================
+
+    function renderAll() {
+        renderStatusTracker();
+        renderRejectionBanner();
+        renderDocumentList();
+    }
+
+    initApplication();
+</script>
+</body>
+</html>

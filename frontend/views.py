@@ -68,3 +68,19 @@ def admin_patient_detail(request, patient_id):
 
 def notifications(request):
     return render(request, 'notifications.html')
+
+def symptom_checker(request):
+    return render(request, 'symptom_checker.html')
+
+def patient_chat(request):
+    return render(request, 'patient_chat.html')
+
+def doctor_chat(request):
+    return render(request, 'doctor_chat.html')
+
+def doctor_documents(request):
+    return render(request, 'doctor_documents.html')
+
+def admin_document_review(request):
+    return render(request, 'admin_document_review.html')
+

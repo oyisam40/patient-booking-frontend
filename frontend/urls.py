@@ -42,4 +42,14 @@ urlpatterns = [
     path('admin-doctors/<int:doctor_id>/', views.admin_doctor_detail, name='admin_doctor_detail'),
 
     path('notifications/', views.notifications, name='notifications'),
+
+    path('symptom-checker/', views.symptom_checker, name='symptom_checker'),
+
+    path('messages/', views.patient_chat, name='patient_chat'),
+
+    path('doctor-messages/', views.doctor_chat, name='doctor_chat'),
+
+    path('verification-documents/', views.doctor_documents, name='doctor_documents'),
+
+    path('admin-document-review/', views.admin_document_review, name='admin_document_review'),
 ]

@@ -231,7 +231,9 @@
         <div class="sidebar-links">
             <a href="{% url 'patient_profile' %}" class="sidebar-link">Profile</a>
             <a href="{% url 'patient_appointments' %}" class="sidebar-link active">My Appointments</a>
+            <a href="{% url 'symptom_checker' %}" class="sidebar-link">Symptom Checker</a>
             <a href="{% url 'browse_doctors' %}" class="sidebar-link">Find a Doctor</a>
+             <a href="{% url 'patient_chat' %}" class="sidebar-link">Messages</a>
             <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
         </div>
         <div class="sidebar-footer">
@@ -321,6 +323,7 @@
                 <div class="d-flex gap-2 mt-3">
                     ${appt.status === 'PENDING_PAYMENT' ? `<button class="btn btn-teal btn-sm w-100 pay-btn" data-id="${appt.id}">Pay Now</button>`: ''}
                     ${appt.status === 'CONFIRMED' ? `<button class="btn btn-teal btn-sm w-100 video-call-btn" data-id="${appt.id}">Join Video Call</button>`: ''}
+                    ${appt.status === 'CONFIRMED' ? `<button class="btn btn-outline-secondary btn-sm w-100 message-btn" data-id="${appt.id}">Message</button>`: ''}
                     <button class="btn btn-outline-danger btn-sm w-100 cancel-btn" data-id="${appt.id}">Cancel Appointment</button>
                 </div>
                 <div class="text-danger mt-2 action-error" style="display:none;"></div>
@@ -334,6 +337,10 @@
 
         document.querySelectorAll('.video-call-btn').forEach(btn => {
             btn.addEventListener('click', () => joinVideoCall(btn.getAttribute('data-id')));
+        });
+
+        document.querySelectorAll('.message-btn').forEach(btn => {
+            btn.addEventListener('click', () => startConversation(btn.getAttribute('data-id')));
         });
 
         document.querySelectorAll('.cancel-btn').forEach(btn => {
@@ -527,6 +534,57 @@
             }
         }
     });
+
+    // =========================================================
+    // START / RESUME CONVERSATION
+    //
+    // POST /api/conversations/ with { booking: <id> } creates or
+    // resumes the conversation tied to this booking, then we
+    // redirect into the chat page with ?conversation=<id> so it
+    // opens directly instead of the user having to find it in
+    // the conversation list.
+    //
+    // TODO: confirm with Ntsako — guessing the response might be
+    // wrapped like verification's { "application": {...} }
+    // pattern (we've seen that convention twice now). Handling
+    // both a bare object and a wrapped one defensively.
+    // =========================================================
+
+    async function startConversation(bookingId) {
+        const errorBox = document.querySelector(`.appointment-row[data-id="${bookingId}"] .action-error`);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/conversations/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ booking: parseInt(bookingId, 10) })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (errorBox) {
+                    errorBox.textContent = data.detail || 'Could not start the conversation.';
+                    errorBox.style.display = 'block';
+                }
+                return;
+            }
+
+            const conversation = data.conversation || data;
+
+            window.location.href = `{% url 'patient_chat' %}?conversation=${conversation.id}`;
+
+        } catch (error) {
+            console.error(error);
+            if (errorBox) {
+                errorBox.textContent = 'Network error: could not start the conversation.';
+                errorBox.style.display = 'block';
+            }
+        }
+    }
 
     // =========================================================
     // VIDEO CALL

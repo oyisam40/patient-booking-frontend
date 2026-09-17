@@ -164,7 +164,9 @@
         <div class="sidebar-links">
             <a href="{% url 'patient_profile' %}" class="sidebar-link">Profile</a>
             <a href="{% url 'patient_appointments' %}" class="sidebar-link">My Appointments</a>
+            <a href="{% url 'symptom_checker' %}" class="sidebar-link">Symptom Checker</a>
             <a href="{% url 'browse_doctors' %}" class="sidebar-link active">Find a Doctor</a>
+             <a href="{% url 'patient_chat' %}" class="sidebar-link">Messages</a>
             <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
         </div>
         <div class="sidebar-footer">
@@ -175,6 +177,11 @@
     <div class="app-content">
 <div class="page-card">
     <h1 class="h3 mb-4 text-center font-weight-normal">Find a Doctor</h1>
+
+    <div id="filterBanner" class="alert alert-info d-flex justify-content-between align-items-center" style="display:none;">
+        <span id="filterBannerText"></span>
+        <a href="{% url 'browse_doctors' %}" class="btn btn-sm btn-outline-secondary">Clear filter</a>
+    </div>
 
     <div class="mb-4">
         <select id="specialtyFilter" class="form-control">
@@ -281,7 +288,31 @@
         loadDoctors(this.value);
     });
 
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+
+        const specialtyParam = urlParams.get('specialty');
+
+        const select = document.getElementById('specialtyFilter');
+
+        if (specialtyParam) {
+        const matchingOption = select.querySelector(`option[value="${specialtyParam}"]`);
+
+        if (matchingOption) {
+            select.value = specialtyParam;
+
+            document.getElementById('filterBannerText').textContent =
+                `Showing ${matchingOption.textContent} based on your symptoms`;
+            document.getElementById('filterBanner').style.display = 'flex';
+
+            loadDoctors(specialtyParam);
+            return;
+        }
+
+    }
+
     loadDoctors('');
+    });
 </script>
 </body>
 </html>
