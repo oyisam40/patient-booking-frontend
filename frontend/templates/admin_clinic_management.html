@@ -237,6 +237,7 @@
             padding: 30px 0;
         }
     </style>
+    <script src="{% static 'js/guard.js' %}" data-allow="ADMIN"></script>
     <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
@@ -408,8 +409,10 @@
 
     // Turns a backend error body ({detail: "..."} or {field: ["msg"]})
     // into readable lines.
-    function describeError(data) {
-        if (!data) return 'Something went wrong. Please try again.';
+    function describeError(data, status) {
+        if (status === 401) return 'You are not logged in. Log in as the platform admin and try again.';
+        if (status === 403) return 'Only the platform admin can do this. Log in with the platform admin account.';
+        if (!data) return `Something went wrong (HTTP ${status || 'unknown'}). Please try again.`;
         if (typeof data === 'string') return data;
         if (data.detail) return String(data.detail);
 
@@ -420,7 +423,7 @@
             return `${field}: ${text}`;
         });
 
-        return lines.length ? lines.join('\n') : 'Something went wrong. Please try again.';
+        return lines.length ? lines.join('\n') : `Something went wrong (HTTP ${status || 'unknown'}). Please try again.`;
     }
 
     function showNotice(message) {
@@ -443,7 +446,7 @@
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch clinics');
+                throw new Error('HTTP ' + response.status);
             }
 
             const data = await response.json();
@@ -451,7 +454,7 @@
         } catch (error) {
             console.error(error);
             document.getElementById('loadingState').style.display = 'block';
-            document.getElementById('loadingState').textContent = 'Could not load clinics.';
+            document.getElementById('loadingState').textContent = 'Could not load clinics (' + error.message + ').';
             return;
         }
 
@@ -555,7 +558,7 @@
         confirmBtn.disabled = false;
 
         if (!response.ok) {
-            errorBox.textContent = describeError(data);
+            errorBox.textContent = describeError(data, response.status);
             errorBox.style.display = 'block';
             return;
         }
@@ -610,7 +613,7 @@
             response = await fetch(`${API_BASE_URL}/api/clinics/${assignTargetId}/admin/`, {
                 method: 'POST',
                 headers: authHeaders(),
-                body: JSON.stringify({ user: userId })
+                body: JSON.stringify({ user_id: userId, user: userId })
             });
             data = await readJson(response);
         } catch (error) {
@@ -624,7 +627,7 @@
         confirmBtn.disabled = false;
 
         if (!response.ok) {
-            errorBox.textContent = describeError(data);
+            errorBox.textContent = describeError(data, response.status);
             errorBox.style.display = 'block';
             return;
         }

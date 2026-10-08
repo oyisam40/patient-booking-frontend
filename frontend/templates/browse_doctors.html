@@ -150,6 +150,7 @@
             color: white;
         }
     </style>
+    <script src="{% static 'js/guard.js' %}" data-allow="PATIENT"></script>
     <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
@@ -364,23 +365,6 @@
             const data = await response.json();
             doctors = data.doctors || data.results || data;
 
-            // TEMPORARY: the clinic doctors endpoint has no profile id yet.
-            // Borrow it from the general doctors list. Remove this block
-            // once Ntsako adds `id` to /api/clinics/{id}/doctors/.
-            if (Array.isArray(doctors) && doctors.some(d => d.id === undefined)) {
-                const profileResponse = await fetch(`${API_BASE_URL}/api/doctors/doctors/`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (profileResponse.ok) {
-                    const profileData = await profileResponse.json();
-                    const profiles = profileData.doctors || profileData.results || profileData;
-                    doctors = attachProfileIds(doctors, Array.isArray(profiles) ? profiles : []);
-                }
-            }
         } catch (error) {
             console.error(error);
             if (selectedClinicId === String(clinicId)) {
@@ -397,29 +381,6 @@
 
         clinicDoctors = Array.isArray(doctors) ? doctors : [];
         applySpecialtyFilter();
-    }
-
-    function doctorKey(name, qualification, years, fee) {
-        return [
-            String(name || '').trim().toLowerCase(),
-            String(qualification || '').trim().toLowerCase(),
-            Number(years),
-            Number(fee)
-        ].join('|');
-    }
-
-    // TEMPORARY matching of clinic doctors to profile ids (see above).
-    function attachProfileIds(clinicList, profiles) {
-        const byKey = {};
-        profiles.forEach(p => {
-            const name = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`;
-            byKey[doctorKey(name, p.qualification, p.years_of_experience, p.consultation_fee)] = p.id;
-        });
-
-        return clinicList.map(d => {
-            const key = doctorKey(d.name, d.qualification, d.years_of_experience, d.consultation_fee);
-            return Object.assign({}, d, { id: d.id !== undefined ? d.id : byKey[key] });
-        });
     }
 
     // The clinic doctors endpoint has no specialty parameter, so the

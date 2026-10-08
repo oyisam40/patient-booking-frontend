@@ -190,6 +190,16 @@
             max-width: 110px;
         }
 
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 8px 16px;
+            margin: 0;
+            font-size: 14px;
+        }
+        .detail-grid dt { color: #888; font-weight: 600; }
+        .detail-grid dd { margin: 0; word-break: break-word; }
+
         .btn-teal {
             background-color: #1B9AAA;
             border-color: #1B9AAA;
@@ -229,7 +239,9 @@
             }
         }
     </style>
+    <script src="{% static 'js/guard.js' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
+    <script src="{% static 'js/clinic_context.js' %}"></script>
 </head>
 <body>
 
@@ -239,16 +251,13 @@
         <span class="app-page-title">Clinic Settings</span>
     </header>
 
-    <!-- Clinic admin sidebar. The Dashboard link uses href="#" on purpose:
-         a Django url tag pointing at a route that doesn't exist yet would
-         crash this page with NoReverseMatch. Swap it for a real url tag
-         once that page is built. -->
     <nav class="app-sidebar" id="appSidebar">
         <div class="sidebar-links">
-            <a href="#" class="sidebar-link">Dashboard</a>
+            <a href="{% url 'clinic_dashboard' %}" class="sidebar-link">Dashboard</a>
             <a href="{% url 'clinic_doctors_staff' %}" class="sidebar-link">Doctors &amp; Staff</a>
             <a href="{% url 'clinic_calendar' %}" class="sidebar-link">Calendar</a>
-            <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments &amp; Reports</a>
+            <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments</a>
+            <a href="{% url 'clinic_reports' %}" class="sidebar-link">Reports</a>
             <a href="{% url 'clinic_settings' %}" class="sidebar-link active">Clinic Settings</a>
             <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
         </div>
@@ -260,33 +269,26 @@
     <div class="app-content">
         <div class="page-card">
             <h1 class="h3 mb-1 font-weight-normal">Clinic Settings</h1>
-            <div class="clinic-name-label" id="clinicNameLabel"></div>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                <div class="clinic-name-label mb-0" id="clinicNameLabel"></div>
+                <select id="clinicSelect" class="form-select form-select-sm" style="max-width:260px;display:none;" aria-label="Clinic"></select>
+            </div>
 
             <div class="loading-state" id="loadingState">Loading settings...</div>
+            <div class="text-danger mb-3" id="loadError" style="display:none;"></div>
 
             <form id="settingsForm" style="display:none;" novalidate>
 
                 <div class="settings-section">
                     <h2>Clinic Details</h2>
-                    <div class="section-hint">How your clinic appears to patients.</div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label" for="clinicName">Clinic name</label>
-                            <input type="text" id="clinicName" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="clinicEmail">Email</label>
-                            <input type="email" id="clinicEmail" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="clinicPhone">Phone</label>
-                            <input type="text" id="clinicPhone" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="clinicAddress">Address</label>
-                            <input type="text" id="clinicAddress" class="form-control">
-                        </div>
-                    </div>
+                    <div class="section-hint">How your clinic appears to patients. Contact details are managed by the platform admin.</div>
+                    <dl class="detail-grid">
+                        <dt>Name</dt><dd id="detName">-</dd>
+                        <dt>Registration number</dt><dd id="detReg">-</dd>
+                        <dt>Email</dt><dd id="detEmail">-</dd>
+                        <dt>Phone</dt><dd id="detPhone">-</dd>
+                        <dt>Address</dt><dd id="detAddress">-</dd>
+                    </dl>
                 </div>
 
                 <div class="settings-section">
@@ -300,10 +302,10 @@
                     <div class="section-hint">Limits on when patients can book.</div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="minNoticeHours">Minimum notice</label>
+                            <label class="form-label" for="minNoticeMinutes">Minimum notice</label>
                             <div class="inline-field">
-                                <input type="number" id="minNoticeHours" class="form-control" min="0" step="1">
-                                <span class="field-suffix">hours before the appointment</span>
+                                <input type="number" id="minNoticeMinutes" class="form-control" min="0" step="15">
+                                <span class="field-suffix">minutes before the appointment</span>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -318,28 +320,17 @@
 
                 <div class="settings-section">
                     <h2>Cancellation Policy</h2>
-                    <div class="section-hint">Applies when a patient or the clinic cancels a booking.</div>
-                    <div class="row g-3">
+                    <div class="section-hint">Whether patients can cancel, and how much notice they must give.</div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="cancellationAllowed">
+                        <label class="form-check-label" for="cancellationAllowed">Patients can cancel their bookings</label>
+                    </div>
+                    <div class="row g-3" id="cancelNoticeGroup">
                         <div class="col-md-6">
-                            <label class="form-label" for="freeCancelHours">Free cancellation window</label>
+                            <label class="form-label" for="cancelNoticeHours">Cancellation notice</label>
                             <div class="inline-field">
-                                <input type="number" id="freeCancelHours" class="form-control" min="0" step="1">
+                                <input type="number" id="cancelNoticeHours" class="form-control" min="0" step="1">
                                 <span class="field-suffix">hours before the appointment</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="lateRefundType">Refund for late cancellations</label>
-                            <select id="lateRefundType" class="form-select">
-                                <option value="NONE">No refund</option>
-                                <option value="PARTIAL">Partial refund</option>
-                                <option value="FULL">Full refund</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6" id="partialPercentGroup" style="display:none;">
-                            <label class="form-label" for="partialRefundPercent">Partial refund amount</label>
-                            <div class="inline-field">
-                                <input type="number" id="partialRefundPercent" class="form-control" min="1" max="99" step="1">
-                                <span class="field-suffix">% of the fee</span>
                             </div>
                         </div>
                     </div>
@@ -370,88 +361,164 @@
         window.location.href = "{% url 'home' %}";
     });
 
-    // =========================================================
-    // PLACEHOLDER DATA
+    // Real endpoints (Ntsako):
+    //   GET   /api/clinics/{id}/settings/
+    //   PATCH /api/clinics/{id}/settings/
+    //   GET   /api/clinics/{id}/            (read-only clinic details)
+    // Platform admin can manage any clinic; a clinic admin only their own.
     //
-    // Ntsako's clinic endpoints don't exist yet, so everything
-    // below stands in for real API calls.
-    //
-    // STILL UNCONFIRMED (all guessed):
-    //   - endpoint paths. Guessing GET and PUT /api/clinic/settings/
-    //     (one object for the whole page). The clinic comes from the
-    //     admin's token, not the URL. It could also be split into
-    //     separate endpoints for details, hours and policy.
-    //   - every field name below:
-    //       name, email, phone, address,
-    //       operating_hours: [{ day_of_week, is_open, start_time, end_time }]
-    //         (day_of_week 0 = Monday ... 6 = Sunday, same convention
-    //          as the doctor availability endpoint),
-    //       min_notice_hours, max_advance_days,
-    //       free_cancellation_hours,
-    //       late_cancellation_refund: NONE | PARTIAL | FULL,
-    //       partial_refund_percent
-    //   - whether doctors can override clinic hours or rules with
-    //     their own availability. Ntsako's "question 5". This page
-    //     assumes the clinic settings are the outer limit.
-    //   - whether the refund options here are right. Payments go
-    //     through Paystack, so the real refund rules are for
-    //     Ntsako to confirm.
-    //   - whether the clinic's own contact details are editable by
-    //     the clinic admin, or only by the platform admin.
-    //
-    // TODO once login routing exists for CLINIC_ADMIN: redirect
-    // anyone else away from this page. That redirect is UX only;
-    // the backend must enforce access and clinic isolation.
-    // =========================================================
+    // TODO: confirm the GET settings response shape. It is assumed to match
+    // the PATCH body (possibly wrapped in "settings"); normalize() accepts both.
 
-    const DAY_NAMES_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-    const MOCK_SETTINGS = {
-        name: "Sandton Family Practice",
-        email: "reception@sandtonfp.example",
-        phone: "011 555 0100",
-        address: "12 Rivonia Road, Sandton",
-        operating_hours: [
-            { day_of_week: 0, is_open: true,  start_time: "08:00", end_time: "17:00" },
-            { day_of_week: 1, is_open: true,  start_time: "08:00", end_time: "17:00" },
-            { day_of_week: 2, is_open: true,  start_time: "08:00", end_time: "17:00" },
-            { day_of_week: 3, is_open: true,  start_time: "08:00", end_time: "17:00" },
-            { day_of_week: 4, is_open: true,  start_time: "08:00", end_time: "17:00" },
-            { day_of_week: 5, is_open: true,  start_time: "08:00", end_time: "13:00" },
-            { day_of_week: 6, is_open: false, start_time: "08:00", end_time: "13:00" }
-        ],
-        min_notice_hours: 2,
-        max_advance_days: 30,
-        free_cancellation_hours: 24,
-        late_cancellation_refund: "PARTIAL",
-        partial_refund_percent: 50
-    };
-
+    let currentClinicId = null;
     let savedSettings = null; // last version loaded or saved, used by Discard
+
+    function authHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
+    function isDirty() {
+        return document.getElementById('dirtyLabel').style.display !== 'none';
+    }
+
+    // Turns every error shape the backend might send into readable lines.
+    function flattenErrors(value, prefix) {
+        if (value == null) return [];
+        if (typeof value === 'string') return [prefix ? `${prefix}: ${value}` : value];
+        if (Array.isArray(value)) {
+            return value.reduce((all, item) => all.concat(flattenErrors(item, prefix)), []);
+        }
+        if (typeof value === 'object') {
+            return Object.keys(value).reduce((all, key) => {
+                const label = prefix ? `${prefix} ${key}` : key;
+                return all.concat(flattenErrors(value[key], label));
+            }, []);
+        }
+        return [String(value)];
+    }
+
+    function describeError(data, status) {
+        if (status === 401) return 'You are not logged in. Please log in again.';
+        if (status === 403) return "You don't have access to this clinic's settings.";
+        if (status === 404) return 'This clinic or its settings were not found.';
+        if (data && data.detail) return String(data.detail);
+        const lines = flattenErrors(data);
+        if (lines.length) return lines.join(' ');
+        return `Something went wrong (HTTP ${status || 'unknown'}). Please try again.`;
+    }
+
+    // Accepts the API object (or the object wrapped in "settings") and
+    // returns the shape this page works with. Missing days count as closed.
+    function normalize(raw) {
+        const s = (raw && raw.settings) || raw || {};
+        const hours = {};
+
+        DAY_KEYS.forEach(key => {
+            const h = (s.operating_hours && s.operating_hours[key]) || {};
+            hours[key] = {
+                is_open: !!h.is_open,
+                open: h.open ? String(h.open).slice(0, 5) : '',
+                close: h.close ? String(h.close).slice(0, 5) : ''
+            };
+        });
+
+        return {
+            minimum_booking_notice_minutes: Number(s.minimum_booking_notice_minutes) || 0,
+            maximum_booking_days_ahead: Number(s.maximum_booking_days_ahead) || 1,
+            operating_hours: hours,
+            cancellation_allowed: !!s.cancellation_allowed,
+            cancellation_notice_hours: Number(s.cancellation_notice_hours) || 0
+        };
+    }
 
     // =========================================================
     // LOAD
     // =========================================================
 
-    async function loadSettings() {
-        // TODO: confirm with Ntsako: replace with:
-        //   GET /api/clinic/settings/
+    function showLoadError(message) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('settingsForm').style.display = 'none';
+        const el = document.getElementById('loadError');
+        el.textContent = message;
+        el.style.display = 'block';
+    }
 
+    function clinicListError(reason) {
+        if (reason === 401) return showLoadError('You are not logged in. Please log in again.');
+        if (reason === 403) return showLoadError("You don't have access to any clinic.");
+        if (reason === 'none') return showLoadError('No clinics found.');
+        if (reason === 0) return showLoadError('Could not reach the server. Please try again later.');
+        showLoadError(`Could not load clinics (HTTP ${reason}).`);
+    }
+
+    function fillDetails(clinic) {
+        const dash = v => (v === null || v === undefined || v === '') ? '-' : String(v);
+        document.getElementById('detName').textContent = dash(clinic && clinic.name);
+        document.getElementById('detReg').textContent = dash(clinic && clinic.registration_number);
+        document.getElementById('detEmail').textContent = dash(clinic && clinic.email);
+        document.getElementById('detPhone').textContent = dash(clinic && clinic.phone_number);
+        document.getElementById('detAddress').textContent = dash(clinic && clinic.address);
+    }
+
+    async function loadSettings(clinicId, clinic) {
+        currentClinicId = clinicId;
+        document.getElementById('clinicNameLabel').textContent = clinic && clinic.name ? clinic.name : '';
+        document.getElementById('loadError').style.display = 'none';
+        document.getElementById('settingsForm').style.display = 'none';
+        document.getElementById('loadingState').style.display = 'block';
+        document.getElementById('loadingState').textContent = 'Loading settings...';
+
+        let data;
+        let status;
+        let clinicDetails = clinic;
+
+        // Only the network calls live inside the try, so a rendering bug is
+        // never reported to the user as a network error.
         try {
-            // Simulating a network call with mock data for now.
-            await new Promise(resolve => setTimeout(resolve, 300));
+            const response = await fetch(`${API_BASE_URL}/api/clinics/${clinicId}/settings/`, {
+                method: 'GET',
+                headers: authHeaders()
+            });
+            status = response.status;
+            data = await response.json().catch(() => null);
 
-            savedSettings = JSON.parse(JSON.stringify(MOCK_SETTINGS));
-
+            try {
+                const detailRes = await fetch(`${API_BASE_URL}/api/clinics/${clinicId}/`, {
+                    method: 'GET',
+                    headers: authHeaders()
+                });
+                if (detailRes.ok) {
+                    clinicDetails = await detailRes.json();
+                }
+            } catch (e) { /* details are optional; keep the list entry */ }
         } catch (error) {
             console.error(error);
-            document.getElementById('loadingState').textContent = 'Could not load settings.';
+            if (currentClinicId === clinicId) {
+                showLoadError('Could not reach the server. Please try again later.');
+            }
             return;
         }
 
+        // The admin may have switched clinic while this was loading.
+        if (String(currentClinicId) !== String(clinicId)) return;
+
+        if (status < 200 || status >= 300) {
+            showLoadError(describeError(data, status));
+            return;
+        }
+
+        savedSettings = normalize(data);
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('settingsForm').style.display = 'block';
+        fillDetails(clinicDetails);
         fillForm(savedSettings);
+        clearMessages();
     }
 
     // =========================================================
@@ -459,39 +526,33 @@
     // =========================================================
 
     function fillForm(s) {
-        document.getElementById('clinicNameLabel').textContent = s.name;
-
-        document.getElementById('clinicName').value = s.name || '';
-        document.getElementById('clinicEmail').value = s.email || '';
-        document.getElementById('clinicPhone').value = s.phone || '';
-        document.getElementById('clinicAddress').value = s.address || '';
-
-        document.getElementById('minNoticeHours').value = s.min_notice_hours;
-        document.getElementById('maxAdvanceDays').value = s.max_advance_days;
-        document.getElementById('freeCancelHours').value = s.free_cancellation_hours;
-        document.getElementById('lateRefundType').value = s.late_cancellation_refund;
-        document.getElementById('partialRefundPercent').value = s.partial_refund_percent || '';
+        document.getElementById('minNoticeMinutes').value = s.minimum_booking_notice_minutes;
+        document.getElementById('maxAdvanceDays').value = s.maximum_booking_days_ahead;
+        document.getElementById('cancellationAllowed').checked = s.cancellation_allowed;
+        document.getElementById('cancelNoticeHours').value = s.cancellation_notice_hours;
 
         renderHours(s.operating_hours);
-        updatePartialVisibility();
+        updateCancelVisibility();
         setDirty(false);
     }
 
     function renderHours(hours) {
         const list = document.getElementById('hoursList');
 
-        list.innerHTML = hours.map(h => `
-            <div class="hours-row" data-day="${h.day_of_week}">
+        list.innerHTML = DAY_KEYS.map((key, i) => {
+            const h = hours[key];
+            return `
+            <div class="hours-row" data-day="${key}">
                 <div class="form-check hours-day">
-                    <input class="form-check-input hours-open" type="checkbox" id="open${h.day_of_week}" ${h.is_open ? 'checked' : ''}>
-                    <label class="form-check-label" for="open${h.day_of_week}">${DAY_NAMES_LONG[h.day_of_week]}</label>
+                    <input class="form-check-input hours-open" type="checkbox" id="open-${key}" ${h.is_open ? 'checked' : ''}>
+                    <label class="form-check-label" for="open-${key}">${DAY_LABELS[i]}</label>
                 </div>
-                <input type="time" class="form-control hours-start" value="${h.start_time}" ${h.is_open ? '' : 'disabled'}>
+                <input type="time" class="form-control hours-start" value="${h.open || '08:00'}" ${h.is_open ? '' : 'disabled'}>
                 <span class="hours-sep">to</span>
-                <input type="time" class="form-control hours-end" value="${h.end_time}" ${h.is_open ? '' : 'disabled'}>
+                <input type="time" class="form-control hours-end" value="${h.close || '17:00'}" ${h.is_open ? '' : 'disabled'}>
                 <span class="hours-closed-label" style="${h.is_open ? 'display:none;' : ''}">Closed</span>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
         list.querySelectorAll('.hours-open').forEach(box => {
             box.addEventListener('change', function () {
@@ -504,67 +565,53 @@
     }
 
     function readForm() {
-        const hours = [];
+        const hours = {};
         document.querySelectorAll('#hoursList .hours-row').forEach(row => {
-            hours.push({
-                day_of_week: parseInt(row.getAttribute('data-day'), 10),
-                is_open: row.querySelector('.hours-open').checked,
-                start_time: row.querySelector('.hours-start').value,
-                end_time: row.querySelector('.hours-end').value
-            });
+            const key = row.getAttribute('data-day');
+            const isOpen = row.querySelector('.hours-open').checked;
+            hours[key] = {
+                is_open: isOpen,
+                open: isOpen ? row.querySelector('.hours-start').value : null,
+                close: isOpen ? row.querySelector('.hours-end').value : null
+            };
         });
 
-        const refundType = document.getElementById('lateRefundType').value;
-
         return {
-            name: document.getElementById('clinicName').value.trim(),
-            email: document.getElementById('clinicEmail').value.trim(),
-            phone: document.getElementById('clinicPhone').value.trim(),
-            address: document.getElementById('clinicAddress').value.trim(),
+            minimum_booking_notice_minutes: parseInt(document.getElementById('minNoticeMinutes').value, 10),
+            maximum_booking_days_ahead: parseInt(document.getElementById('maxAdvanceDays').value, 10),
             operating_hours: hours,
-            min_notice_hours: parseInt(document.getElementById('minNoticeHours').value, 10),
-            max_advance_days: parseInt(document.getElementById('maxAdvanceDays').value, 10),
-            free_cancellation_hours: parseInt(document.getElementById('freeCancelHours').value, 10),
-            late_cancellation_refund: refundType,
-            partial_refund_percent: refundType === 'PARTIAL'
-                ? parseInt(document.getElementById('partialRefundPercent').value, 10)
-                : null
+            cancellation_allowed: document.getElementById('cancellationAllowed').checked,
+            cancellation_notice_hours: parseInt(document.getElementById('cancelNoticeHours').value, 10)
         };
     }
 
     // Returns an error message, or '' if the settings are valid.
     function validate(s) {
-        if (!s.name) return 'Clinic name is required.';
-        if (!s.email) return 'Email is required.';
+        let anyOpen = false;
 
-        for (const h of s.operating_hours) {
+        for (let i = 0; i < DAY_KEYS.length; i++) {
+            const h = s.operating_hours[DAY_KEYS[i]];
             if (!h.is_open) continue;
-            if (!h.start_time || !h.end_time) {
-                return `Please set opening and closing times for ${DAY_NAMES_LONG[h.day_of_week]}.`;
+            anyOpen = true;
+            if (!h.open || !h.close) {
+                return `Please set opening and closing times for ${DAY_LABELS[i]}.`;
             }
-            if (h.end_time <= h.start_time) {
-                return `Closing time must be after opening time on ${DAY_NAMES_LONG[h.day_of_week]}.`;
+            if (h.close <= h.open) {
+                return `Closing time must be after opening time on ${DAY_LABELS[i]}.`;
             }
         }
 
-        if (!s.operating_hours.some(h => h.is_open)) {
-            return 'The clinic must be open at least one day a week.';
-        }
+        if (!anyOpen) return 'The clinic must be open at least one day a week.';
 
-        if (!Number.isInteger(s.min_notice_hours) || s.min_notice_hours < 0) {
-            return 'Minimum notice must be 0 or more hours.';
+        if (!Number.isInteger(s.minimum_booking_notice_minutes) || s.minimum_booking_notice_minutes < 0) {
+            return 'Minimum notice must be 0 or more minutes.';
         }
-        if (!Number.isInteger(s.max_advance_days) || s.max_advance_days < 1) {
+        if (!Number.isInteger(s.maximum_booking_days_ahead) || s.maximum_booking_days_ahead < 1) {
             return 'Maximum advance booking must be at least 1 day.';
         }
-        if (!Number.isInteger(s.free_cancellation_hours) || s.free_cancellation_hours < 0) {
-            return 'Free cancellation window must be 0 or more hours.';
-        }
-        if (s.late_cancellation_refund === 'PARTIAL') {
-            if (!Number.isInteger(s.partial_refund_percent) ||
-                s.partial_refund_percent < 1 || s.partial_refund_percent > 99) {
-                return 'Partial refund must be a whole number between 1 and 99.';
-            }
+        if (s.cancellation_allowed &&
+            (!Number.isInteger(s.cancellation_notice_hours) || s.cancellation_notice_hours < 0)) {
+            return 'Cancellation notice must be 0 or more hours.';
         }
 
         return '';
@@ -574,13 +621,13 @@
     // UI STATE
     // =========================================================
 
-    function updatePartialVisibility() {
-        const isPartial = document.getElementById('lateRefundType').value === 'PARTIAL';
-        document.getElementById('partialPercentGroup').style.display = isPartial ? 'block' : 'none';
+    function updateCancelVisibility() {
+        const allowed = document.getElementById('cancellationAllowed').checked;
+        document.getElementById('cancelNoticeGroup').style.display = allowed ? 'flex' : 'none';
     }
 
-    function setDirty(isDirty) {
-        document.getElementById('dirtyLabel').style.display = isDirty ? 'inline' : 'none';
+    function setDirty(dirty) {
+        document.getElementById('dirtyLabel').style.display = dirty ? 'inline' : 'none';
     }
 
     function clearMessages() {
@@ -588,16 +635,14 @@
         document.getElementById('formSuccess').style.display = 'none';
     }
 
-    document.getElementById('lateRefundType').addEventListener('change', updatePartialVisibility);
+    document.getElementById('cancellationAllowed').addEventListener('change', updateCancelVisibility);
 
     // Any edit inside the form marks it as having unsaved changes.
-    document.getElementById('settingsForm').addEventListener('input', function () {
-        setDirty(true);
-        clearMessages();
-    });
-    document.getElementById('settingsForm').addEventListener('change', function () {
-        setDirty(true);
-        clearMessages();
+    ['input', 'change'].forEach(evt => {
+        document.getElementById('settingsForm').addEventListener(evt, function () {
+            setDirty(true);
+            clearMessages();
+        });
     });
 
     document.getElementById('resetBtn').addEventListener('click', function () {
@@ -607,7 +652,7 @@
 
     // Warn before leaving with unsaved edits.
     window.addEventListener('beforeunload', function (e) {
-        if (document.getElementById('dirtyLabel').style.display !== 'none') {
+        if (isDirty()) {
             e.preventDefault();
             e.returnValue = '';
         }
@@ -635,17 +680,19 @@
         }
 
         saveBtn.disabled = true;
+        const savingFor = currentClinicId;
 
-        // Only the network call lives inside the try. The UI updates
-        // happen after it, so a bug in rendering can never be
-        // reported to the user as a "network error".
+        let status;
+        let data;
+
         try {
-            // TODO: confirm with Ntsako: replace with:
-            //   PUT /api/clinic/settings/   (body: newSettings)
-            // and only continue if response.ok. On a 400, show the
-            // field errors the backend returns.
-            await new Promise(resolve => setTimeout(resolve, 400));
-
+            const response = await fetch(`${API_BASE_URL}/api/clinics/${savingFor}/settings/`, {
+                method: 'PATCH',
+                headers: authHeaders(),
+                body: JSON.stringify(newSettings)
+            });
+            status = response.status;
+            data = await response.json().catch(() => null);
         } catch (error) {
             console.error(error);
             errorEl.textContent = 'Network error: could not save your settings.';
@@ -654,19 +701,37 @@
             return;
         }
 
-        savedSettings = JSON.parse(JSON.stringify(newSettings));
-        document.getElementById('clinicNameLabel').textContent = savedSettings.name;
-        setDirty(false);
-        successEl.textContent = 'Settings saved.';
-        successEl.style.display = 'block';
         saveBtn.disabled = false;
+
+        if (status < 200 || status >= 300) {
+            errorEl.textContent = describeError(data, status);
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        // Use what the server saved when it sends it back, otherwise what we sent.
+        const echoed = data && (data.settings || data);
+        savedSettings = echoed && echoed.operating_hours ? normalize(echoed) : normalize(newSettings);
+
+        if (String(currentClinicId) === String(savingFor)) {
+            fillForm(savedSettings);
+            successEl.textContent = 'Settings saved.';
+            successEl.style.display = 'block';
+        }
     });
 
     // =========================================================
     // INITIAL LOAD
     // =========================================================
 
-    loadSettings();
+    ClinicContext.init({
+        selectId: 'clinicSelect',
+        onSelect: loadSettings,
+        canChange: function () {
+            return !isDirty() || window.confirm('You have unsaved changes. Discard them and switch clinic?');
+        },
+        onError: clinicListError
+    });
 </script>
 </body>
 </html>

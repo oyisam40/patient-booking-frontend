@@ -255,7 +255,9 @@
             }
         }
     </style>
+    <script src="{% static 'js/guard.js' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
+    <script src="{% static 'js/clinic_context.js' %}"></script>
 </head>
 <body>
 
@@ -283,7 +285,10 @@
     <div class="app-content">
         <div class="page-card">
             <h1 class="h3 mb-1 font-weight-normal">Dashboard</h1>
-            <div class="clinic-name-label" id="clinicNameLabel"></div>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                <div class="clinic-name-label mb-0" id="clinicNameLabel"></div>
+                <select id="clinicSelect" class="form-select form-select-sm" style="max-width:260px;display:none;" aria-label="Clinic"></select>
+            </div>
 
             <div class="loading-state" id="loadingState">Loading dashboard...</div>
 
@@ -294,16 +299,35 @@
                         <div class="stat-label">Appointments today</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="statPendingDoctor">0</div>
-                        <div class="stat-label">Awaiting doctor</div>
+                        <div class="stat-value" id="statPending">0</div>
+                        <div class="stat-label">Pending bookings</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="statPendingPayment">0</div>
-                        <div class="stat-label">Awaiting payment</div>
+                        <div class="stat-value" id="statConfirmed">0</div>
+                        <div class="stat-label">Confirmed</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" id="statDoctors">0</div>
                         <div class="stat-label">Active doctors</div>
+                    </div>
+                </div>
+
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">Total bookings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statCompleted">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statCancelled">0</div>
+                        <div class="stat-label">Cancelled</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statPatients">0</div>
+                        <div class="stat-label">Patients</div>
                     </div>
                 </div>
 
@@ -334,47 +358,16 @@
         window.location.href = "{% url 'home' %}";
     });
 
-    // =========================================================
-    // PLACEHOLDER DATA
+    // Real endpoints (Ntsako):
+    //   GET /api/clinics/{id}/dashboard/ -> { clinic: {...}, statistics: {
+    //       total_doctors, active_doctors, total_patients, total_bookings,
+    //       pending_bookings, confirmed_bookings, completed_bookings,
+    //       cancelled_bookings, todays_appointments } }
+    //   GET /api/bookings/admin/ -> { count, bookings: [...] }  (used only for
+    //       the "Today's Schedule" list, filtered to this clinic and today)
     //
-    // Ntsako's clinic endpoints don't exist yet, so the data below
-    // stands in for a real API call.
-    //
-    // The mock mimics ONE summary response so the page only needs a
-    // single request. When the real endpoint exists, only
-    // loadDashboard() has to change; the render code reads the shape
-    // below.
-    //
-    // STILL UNCONFIRMED (all guessed):
-    //   - the endpoint: GET /api/clinic/dashboard/ (clinic comes from
-    //     the admin's token). Alternative: compute these counts here
-    //     from GET /api/clinic/bookings/ and the doctors endpoint.
-    //   - every field name in the summary below:
-    //       clinic_name, today_count, pending_doctor_count,
-    //       pending_payment_count, active_doctor_count,
-    //       todays_appointments: [{ id, patient_name, doctor_name,
-    //       appointment_time, status, status_display, reason }]
-    //   - what "today" means. It should be the clinic's timezone,
-    //     decided by the server, not the admin's browser.
-    //
-    // TODO once login routing exists for CLINIC_ADMIN: redirect
-    // anyone else away from this page. That redirect is UX only;
-    // the backend must enforce access and clinic isolation.
-    // =========================================================
-
-    const MOCK_SUMMARY = {
-        clinic_name: "Sandton Family Practice",
-        today_count: 4,
-        pending_doctor_count: 2,
-        pending_payment_count: 1,
-        active_doctor_count: 3,
-        todays_appointments: [
-            { id: 101, patient_name: "Oyisa Mjali",  doctor_name: "Mihlali Kane",   appointment_time: "09:00:00", status: "CONFIRMED",      status_display: "Confirmed",      reason: "Follow-up consultation" },
-            { id: 102, patient_name: "Khaya Mkhize", doctor_name: "Lebo Rantao",    appointment_time: "10:00:00", status: "PENDING_DOCTOR", status_display: "Pending doctor", reason: "Knee pain" },
-            { id: 103, patient_name: "Naledi Dube",  doctor_name: "Zanele Khumalo", appointment_time: "11:00:00", status: "CONFIRMED",      status_display: "Confirmed",      reason: "Child vaccination" },
-            { id: 105, patient_name: "Thabo Nkosi",  doctor_name: "Lebo Rantao",    appointment_time: "14:00:00", status: "COMPLETED",      status_display: "Completed",      reason: "Sports injury review" }
-        ]
-    };
+    // TODO: confirm "today" is decided the same way on the server (the
+    // clinic's timezone) as in the list here (this browser's local date).
 
     // Names and reasons are typed in by users and end up inside
     // innerHTML below, so they are escaped first.
@@ -391,38 +384,119 @@
         return 'status-pending'; // PENDING_PAYMENT, PENDING_DOCTOR
     }
 
-    async function loadDashboard() {
-        // TODO: confirm with Ntsako: replace with:
-        //   GET /api/clinic/dashboard/
+    let currentClinicId = null;
 
-        let summary;
+    // Local-time YYYY-MM-DD (toISOString would shift the date for anyone not on UTC).
+    function toISODate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
 
+    async function getJson(path) {
+        const response = await fetch(`${API_BASE_URL}${path}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await response.json().catch(() => null);
+        return { status: response.status, data: data };
+    }
+
+    function showLoadMessage(message) {
+        document.getElementById('dashboardContent').style.display = 'none';
+        document.getElementById('loadingState').textContent = message;
+        document.getElementById('loadingState').style.display = 'block';
+    }
+
+    function describeError(status) {
+        if (status === 401) return 'You are not logged in. Please log in again.';
+        if (status === 403) return "You don't have access to this clinic's dashboard.";
+        return `Could not load the dashboard (HTTP ${status}).`;
+    }
+
+    function clinicListError(reason) {
+        if (reason === 401) return showLoadMessage('You are not logged in. Please log in again.');
+        if (reason === 403) return showLoadMessage("You don't have access to any clinic.");
+        if (reason === 'none') return showLoadMessage('No clinics found.');
+        if (reason === 0) return showLoadMessage('Could not reach the server. Please try again later.');
+        showLoadMessage(`Could not load clinics (HTTP ${reason}).`);
+    }
+
+    async function loadDashboard(clinicId, clinic) {
+        currentClinicId = clinicId;
+        document.getElementById('clinicNameLabel').textContent = clinic && clinic.name ? clinic.name : '';
+        showLoadMessage('Loading dashboard...');
+
+        let stats;
+        let bookings;
+
+        // Only the network calls live inside the try, so a rendering bug is
+        // never reported to the user as a network error.
         try {
-            // Simulating a network call with mock data for now.
-            await new Promise(resolve => setTimeout(resolve, 300));
-            summary = JSON.parse(JSON.stringify(MOCK_SUMMARY));
-
+            [stats, bookings] = await Promise.all([
+                getJson(`/api/clinics/${clinicId}/dashboard/`),
+                getJson('/api/bookings/admin/')
+            ]);
         } catch (error) {
             console.error(error);
-            document.getElementById('loadingState').textContent = 'Could not load the dashboard.';
+            if (String(currentClinicId) === String(clinicId)) {
+                showLoadMessage('Could not reach the server. Please try again later.');
+            }
             return;
+        }
+
+        // The admin may have switched clinic while this was loading.
+        if (String(currentClinicId) !== String(clinicId)) return;
+
+        if (stats.status < 200 || stats.status >= 300) {
+            showLoadMessage(describeError(stats.status));
+            return;
+        }
+
+        // The schedule list is a bonus: if it fails, the numbers still show.
+        let todays = [];
+        if (bookings.status >= 200 && bookings.status < 300 && bookings.data) {
+            const all = bookings.data.bookings || bookings.data.results || bookings.data;
+            const today = toISODate(new Date());
+            todays = (Array.isArray(all) ? all : []).filter(b =>
+                String(b.clinic) === String(clinicId) &&
+                b.appointment_date === today &&
+                b.status !== 'CANCELLED');
         }
 
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
-        renderDashboard(summary);
+        renderDashboard(stats.data || {}, todays, clinic);
     }
 
-    function renderDashboard(s) {
-        document.getElementById('clinicNameLabel').textContent = s.clinic_name;
-        document.getElementById('statToday').textContent = s.today_count;
-        document.getElementById('statPendingDoctor').textContent = s.pending_doctor_count;
-        document.getElementById('statPendingPayment').textContent = s.pending_payment_count;
-        document.getElementById('statDoctors').textContent = s.active_doctor_count;
+    function renderDashboard(data, todays, clinic) {
+        const c = data.clinic || clinic || {};
+        const st = data.statistics || {};
+        const num = v => (typeof v === 'number' ? v : 0);
+
+        if (c.name) document.getElementById('clinicNameLabel').textContent = c.name;
+
+        // todays_appointments may be a count or a list.
+        const todayCount = Array.isArray(st.todays_appointments)
+            ? st.todays_appointments.length
+            : num(st.todays_appointments);
+
+        document.getElementById('statToday').textContent = todayCount;
+        document.getElementById('statPending').textContent = num(st.pending_bookings);
+        document.getElementById('statConfirmed').textContent = num(st.confirmed_bookings);
+        document.getElementById('statDoctors').textContent = num(st.active_doctors);
+        document.getElementById('statTotal').textContent = num(st.total_bookings);
+        document.getElementById('statCompleted').textContent = num(st.completed_bookings);
+        document.getElementById('statCancelled').textContent = num(st.cancelled_bookings);
+        document.getElementById('statPatients').textContent = num(st.total_patients);
 
         const list = document.getElementById('todayList');
         const emptyState = document.getElementById('emptyState');
-        const appts = (s.todays_appointments || []).slice()
+        const appts = todays.slice()
             .sort((a, b) => String(a.appointment_time).localeCompare(String(b.appointment_time)));
 
         if (appts.length === 0) {
@@ -444,7 +518,11 @@
         `).join('');
     }
 
-    loadDashboard();
+    ClinicContext.init({
+        selectId: 'clinicSelect',
+        onSelect: loadDashboard,
+        onError: clinicListError
+    });
 </script>
 </body>
 </html>

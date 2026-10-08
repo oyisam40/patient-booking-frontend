@@ -110,7 +110,7 @@
         }
 
         .page-card {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
             background: #fff;
             border-radius: 16px;
@@ -298,7 +298,6 @@
             margin-top: 14px;
         }
 
-
         .btn-teal {
             background-color: #1B9AAA;
             border-color: #1B9AAA;
@@ -318,7 +317,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 1050;
+            z-index: 1060;
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -332,7 +331,7 @@
             background: #fff;
             border-radius: 12px;
             padding: 28px;
-            max-width: 440px;
+            max-width: 420px;
             width: 100%;
             box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
         }
@@ -340,7 +339,8 @@
         .detail-row {
             display: flex;
             justify-content: space-between;
-            gap: 16px; padding: 8px 0;
+            gap: 16px;
+            padding: 8px 0;
             border-bottom: 1px solid #f0f0f0;
             font-size: 14px;
         }
@@ -357,6 +357,7 @@
             font-weight: 600;
             text-align: right;
         }
+
         .loading-state {
             text-align: center;
             color: #999;
@@ -364,15 +365,14 @@
         }
 
         @media (max-width: 768px) {
-            .appt-row {
-                text-align: center;
-                color: #999;
-                padding: 30px 0;
+            .page-card {
+                padding: 24px 16px;
             }
-
         }
     </style>
+    <script src="{% static 'js/guard.js' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
+    <script src="{% static 'js/clinic_context.js' %}"></script>
 </head>
 <body>
 
@@ -382,17 +382,14 @@
         <span class="app-page-title">Calendar</span>
     </header>
 
-    <!-- Clinic admin sidebar. Links to pages that aren't built yet use
-         href="#" on purpose — a Django url tag pointing at a route that
-         doesn't exist yet would crash this page with NoReverseMatch.
-         Swap each "#" for a real url tag as that page gets built. -->
     <nav class="app-sidebar" id="appSidebar">
         <div class="sidebar-links">
-            <a href="#" class="sidebar-link">Dashboard</a>
+            <a href="{% url 'clinic_dashboard' %}" class="sidebar-link">Dashboard</a>
             <a href="{% url 'clinic_doctors_staff' %}" class="sidebar-link">Doctors &amp; Staff</a>
             <a href="{% url 'clinic_calendar' %}" class="sidebar-link active">Calendar</a>
-            <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments &amp; Reports</a>
-            <a href="#" class="sidebar-link">Clinic Settings</a>
+            <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments</a>
+            <a href="{% url 'clinic_reports' %}" class="sidebar-link">Reports</a>
+            <a href="{% url 'clinic_settings' %}" class="sidebar-link">Clinic Settings</a>
             <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
         </div>
         <div class="sidebar-footer">
@@ -403,7 +400,10 @@
     <div class="app-content">
         <div class="page-card">
             <h1 class="h3 mb-1 font-weight-normal">Clinic Calendar</h1>
-            <div class="clinic-name-label" id="clinicNameLabel"></div>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                <div class="clinic-name-label mb-0" id="clinicNameLabel"></div>
+                <select id="clinicSelect" class="form-select form-select-sm" style="max-width:260px;display:none;" aria-label="Clinic"></select>
+            </div>
 
             <div class="cal-toolbar">
                 <div class="cal-nav">
@@ -454,6 +454,7 @@
             <button type="button" class="btn btn-outline-secondary w-100 mt-3" id="detailCloseBtn">Close</button>
         </div>
     </div>
+
 <script>
     const token = localStorage.getItem('accessToken');
 
@@ -467,62 +468,21 @@
         window.location.href = "{% url 'home' %}";
     });
 
-      // =========================================================
-    // PLACEHOLDER DATA
-    //
-    // Ntsako's clinic endpoints don't exist yet, so the data below
-    // stands in for real API calls. It uses the same booking fields
-    // as the Appointments page:
-    //   id, patient_name, doctor (id), doctor_name, appointment_date,
-    //   appointment_time, status, status_display, reason,
-    //   cancellation_reason
-    // Slots are fixed 1-hour slots (confirmed by Ntsako), so every
-    // mock time is on the hour and one slot = one calendar cell.
-    //
-    // The mock dates are generated relative to the current week so
-    // the calendar is never empty when you open it.
-    //
-    // STILL UNCONFIRMED (guessed):
-    //   - endpoint paths. Guessing the same list endpoint as the
-    //     Appointments page, GET /api/clinic/bookings/, with
-    //     ?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD so the server only
-    //     returns the visible week. Clinic comes from the admin's
-    //     token, not the URL.
-    //   - the "doctor" and "cancellation_reason" field names.
-    //   - the clinic's working hours. Hours shown here default to
-    //     08:00-17:00 and widen to fit any booking outside that range.
-    //     Real hours should come from the clinic settings once
-    //     Ntsako defines them.
-    //
-    // This page is read-only on purpose: cancelling lives on the
-    // Appointments page.
-    //
-    // TODO once login routing exists for CLINIC_ADMIN: redirect
-    // anyone else away from this page. That redirect is UX only;
-    // the backend must enforce access and clinic isolation.
-    // =========================================================
-
-     const MOCK_CLINIC = { id: 1, name: "Sandton Family Practice" };
-
-    // dayOffset 0 = Monday of the current week.
-    const MOCK_TEMPLATE = [
-        { id: 101, patient_name: "Oyisa Mjali",  doctor: 2, doctor_name: "Mihlali Kane",   dayOffset: 0, hour: 9,  status: "CONFIRMED",       reason: "Follow-up consultation" },
-        { id: 102, patient_name: "Khaya Mkhize", doctor: 1, doctor_name: "Lebo Rantao",    dayOffset: 0, hour: 9,  status: "PENDING_DOCTOR",  reason: "Knee pain" },
-        { id: 103, patient_name: "Naledi Dube",  doctor: 3, doctor_name: "Zanele Khumalo", dayOffset: 1, hour: 11, status: "CONFIRMED",       reason: "Child vaccination" },
-        { id: 104, patient_name: "Thabo Nkosi",  doctor: 2, doctor_name: "Mihlali Kane",   dayOffset: 2, hour: 14, status: "PENDING_PAYMENT", reason: "Annual check-up" },
-        { id: 105, patient_name: "Oyisa Mjali",  doctor: 1, doctor_name: "Lebo Rantao",    dayOffset: 2, hour: 8,  status: "COMPLETED",       reason: "Sports injury review" },
-        { id: 106, patient_name: "Khaya Mkhize", doctor: 2, doctor_name: "Mihlali Kane",   dayOffset: 3, hour: 13, status: "CANCELLED",       reason: "Consultation", cancellation_reason: "Schedule conflict" },
-        { id: 107, patient_name: "Naledi Dube",  doctor: 1, doctor_name: "Lebo Rantao",    dayOffset: 3, hour: 10, status: "CONFIRMED",       reason: "Back pain" },
-        { id: 108, patient_name: "Thabo Nkosi",  doctor: 3, doctor_name: "Zanele Khumalo", dayOffset: 4, hour: 15, status: "CONFIRMED",       reason: "Rash" },
-        { id: 109, patient_name: "Oyisa Mjali",  doctor: 3, doctor_name: "Zanele Khumalo", dayOffset: 4, hour: 15, status: "PENDING_DOCTOR",  reason: "Skin review" },
-        { id: 110, patient_name: "Khaya Mkhize", doctor: 1, doctor_name: "Lebo Rantao",    dayOffset: 7, hour: 9,  status: "CONFIRMED",       reason: "Next week check" },
-    ];
+    // Real endpoint (Ntsako): GET /api/bookings/admin/ -> { count, bookings: [...] }.
+    // Every booking has: id, clinic, patient_name, doctor (profile id), doctor_name,
+    // appointment_date, appointment_time, status, status_display, reason.
+    // All of this admin's bookings come back at once; the page keeps only those of the
+    // selected clinic and shows one week at a time. Slots are fixed 1-hour slots.
+    // This page is read-only on purpose: cancelling lives on the Appointments page.
+    // TODO: working hours should come from the clinic settings; for now the grid
+    // shows 08:00-17:00 and widens to fit any booking outside that range.
 
     const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const DEFAULT_START_HOUR = 8;
     const DEFAULT_END_HOUR = 17;
 
     let clinicName = '';
+    let currentClinicId = null;
     let appointments = [];
     let weekStart = getMonday(new Date());
 
@@ -581,45 +541,67 @@
     // LOAD
     // =========================================================
 
-    function buildMockAppointments() {
-        const monday = getMonday(new Date());
-
-        return MOCK_TEMPLATE.map(t => ({
-            id: t.id,
-            patient_name: t.patient_name,
-            doctor: t.doctor,
-            doctor_name: t.doctor_name,
-            appointment_date: toISODate(addDays(monday, t.dayOffset)),
-            appointment_time: String(t.hour).padStart(2, '0') + ':00:00',
-            status: t.status,
-            status_display: t.status.replace('_', ' ').toLowerCase().replace(/^./, c => c.toUpperCase()),
-            reason: t.reason,
-            cancellation_reason: t.cancellation_reason || null
-        }));
+    function showLoadMessage(message) {
+        document.getElementById('calScroll').style.display = 'none';
+        document.getElementById('weekSummary').textContent = '';
+        document.getElementById('loadingState').textContent = message;
+        document.getElementById('loadingState').style.display = 'block';
     }
 
-    async function loadData() {
-        // TODO: confirm with Ntsako: replace with:
-        //   GET /api/clinic/me/
-        //   GET /api/clinic/bookings/?date_from=<monday>&date_to=<sunday>
-        // and call it again from changeWeek() so only the visible
-        // week is fetched.
+    function describeError(status) {
+        if (status === 401) return 'You are not logged in. Please log in again.';
+        if (status === 403) return "You don't have access to this clinic's calendar.";
+        return `Could not load the calendar (HTTP ${status}).`;
+    }
 
+    function clinicListError(reason) {
+        if (reason === 401) return showLoadMessage('You are not logged in. Please log in again.');
+        if (reason === 403) return showLoadMessage("You don't have access to any clinic.");
+        if (reason === 'none') return showLoadMessage('No clinics found.');
+        if (reason === 0) return showLoadMessage('Could not reach the server. Please try again later.');
+        showLoadMessage(`Could not load clinics (HTTP ${reason}).`);
+    }
+
+    async function loadData(clinicId, clinic) {
+        currentClinicId = clinicId;
+        clinicName = clinic && clinic.name ? clinic.name : '';
+        appointments = [];
+        document.getElementById('clinicNameLabel').textContent = clinicName;
+        showLoadMessage('Loading calendar...');
+
+        let response;
+        let data;
         try {
-            // Simulating a network call with mock data for now.
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            clinicName = MOCK_CLINIC.name;
-            appointments = buildMockAppointments();
-
+            response = await fetch(`${API_BASE_URL}/api/bookings/admin/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            data = await response.json().catch(() => null);
         } catch (error) {
             console.error(error);
-            document.getElementById('loadingState').textContent = 'Could not load the calendar.';
+            if (String(currentClinicId) === String(clinicId)) {
+                showLoadMessage('Could not reach the server. Please try again later.');
+            }
             return;
         }
 
+        if (String(currentClinicId) !== String(clinicId)) return; // clinic switched meanwhile
+
+        if (!response.ok) {
+            showLoadMessage(describeError(response.status));
+            return;
+        }
+
+        const list = data && (data.bookings || data.results || data);
+        appointments = (Array.isArray(list) ? list : [])
+            .filter(b => String(b.clinic) === String(clinicId));
+
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('calScroll').style.display = 'block';
+        document.getElementById('filterDoctor').value = '';
         buildDoctorFilter();
         renderCalendar();
     }
@@ -704,7 +686,7 @@
         document.getElementById('calBody').innerHTML = bodyHtml;
 
         document.querySelectorAll('.appt-chip').forEach(chip => {
-            chip.addEventListener('click', () => openDetail(parseInt(chip.getAttribute('data-id'), 10)));
+            chip.addEventListener('click', () => openDetail(chip.getAttribute('data-id')));
         });
 
         document.getElementById('weekSummary').textContent =
@@ -713,7 +695,7 @@
 
     function chipHtml(appt) {
         return `
-            <button type="button" class="appt-chip ${chipClass(appt.status)}" data-id="${appt.id}">
+            <button type="button" class="appt-chip ${chipClass(appt.status)}" data-id="${escapeHtml(appt.id)}">
                 <span class="chip-patient">${escapeHtml(appt.patient_name)}</span>
                 <span class="chip-doctor">Dr. ${escapeHtml(appt.doctor_name)}</span>
             </button>
@@ -726,8 +708,6 @@
 
     function changeWeek(deltaWeeks) {
         weekStart = addDays(weekStart, deltaWeeks * 7);
-        // TODO: confirm with Ntsako: when the real endpoint is used,
-        // fetch the newly visible week here before rendering.
         renderCalendar();
     }
 
@@ -751,7 +731,7 @@
     }
 
     function openDetail(id) {
-        const appt = appointments.find(a => a.id === id);
+        const appt = appointments.find(a => String(a.id) === String(id));
         if (!appt) return;
 
         let html = '';
@@ -779,7 +759,11 @@
     // INITIAL LOAD
     // =========================================================
 
-    loadData();
+    ClinicContext.init({
+        selectId: 'clinicSelect',
+        onSelect: loadData,
+        onError: clinicListError
+    });
 </script>
 </body>
 </html>

@@ -133,6 +133,23 @@
             return 'Login failed. Please check your details and try again.';
         }
 
+        // True if this user is an active ADMIN of at least one clinic.
+        // Any failure means "no": the user simply lands on the patient page.
+        async function isClinicAdmin(accessToken) {
+            try {
+                const response = await fetch(API_BASE_URL + '/api/clinics/my-memberships/', {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                if (!response.ok) return false;
+                const data = await response.json();
+                const list = data.memberships || data.results || data;
+                return Array.isArray(list) && list.some(m =>
+                    String(m.role).toUpperCase() === 'ADMIN' && m.is_active !== false);
+            } catch (e) {
+                return false;
+            }
+        }
+
         loginForm.addEventListener('submit', async function (event) {
             event.preventDefault();
             loginError.style.display = 'none';
@@ -167,12 +184,17 @@
                         localStorage.setItem('userRole', data.user.role);
                     }
 
-                    if (data.user && data.user.role === 'DOCTOR') {
+                    const role = data.user && data.user.role;
+
+                    if (role === 'DOCTOR') {
                         window.location.href = "{% url 'doctor_profile' %}";
-                    } else if (data.user && data.user.role === 'ADMIN') {
+                    } else if (role === 'ADMIN') {
                         window.location.href = "{% url 'admin_dashboard' %}";
-                    }
-                    else {
+                    } else if (await isClinicAdmin(data.access)) {
+                        // A clinic admin keeps the PATIENT global role, so the
+                        // role alone can't tell them apart: ask for memberships.
+                        window.location.href = "/clinic-dashboard/";
+                    } else {
                         window.location.href = "{% url 'patient_profile' %}";
                     }
                 } else {

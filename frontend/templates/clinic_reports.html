@@ -282,7 +282,9 @@
             }
         }
     </style>
+    <script src="{% static 'js/guard.js' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
+    <script src="{% static 'js/clinic_context.js' %}"></script>
 </head>
 <body>
 
@@ -310,7 +312,10 @@
     <div class="app-content">
         <div class="page-card">
             <h1 class="h3 mb-1 font-weight-normal">Operational Reports</h1>
-            <div class="clinic-name-label" id="clinicNameLabel"></div>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+                <div class="clinic-name-label mb-0" id="clinicNameLabel"></div>
+                <select id="clinicSelect" class="form-select form-select-sm" style="max-width:260px;display:none;" aria-label="Clinic"></select>
+            </div>
 
             <div class="filter-bar">
                 <div class="filter-group">
@@ -332,6 +337,7 @@
             </div>
 
             <div class="text-danger mb-3" id="filterError" style="display:none;"></div>
+            <div class="text-muted small mb-3" id="reportNote" style="display:none;"></div>
             <div class="loading-state" id="loadingState">Loading report...</div>
 
             <div id="reportContent" style="display:none;">
@@ -395,49 +401,27 @@
     });
 
     // =========================================================
-    // PLACEHOLDER DATA
+    // DATA
     //
-    // Ntsako's clinic endpoints don't exist yet, so everything
-    // below stands in for real API calls.
+    // Real endpoint (Ntsako): GET /api/clinics/{id}/reports/
+    //   filters:  date_from, date_to, doctor_id, status, page, page_size (max 100)
+    //   response: { count, next, previous, results: {
+    //                 clinic: {id, name}, filters: {...},
+    //                 summary: { total, completed, confirmed, cancelled,
+    //                            pending_payment, pending_doctor },
+    //                 bookings: [ ...booking objects ] } }
     //
-    // fetchReport() below plays the role of the SERVER: it filters
-    // the mock bookings and returns already-totalled results in one
-    // shape. The render code only reads that shape, so when the real
-    // endpoint exists, only fetchReport() has to change.
+    // The summary is calculated by the server for the whole filtered set.
+    // The per-weekday and per-doctor numbers are counted here, from the
+    // bookings, which are fetched page by page.
     //
-    //   { clinic_name, total,
-    //     by_status:  { CONFIRMED: n, ... },
-    //     by_weekday: [n x 7]            (index 0 = Monday),
-    //     by_doctor:  [{ doctor, doctor_name, total, completed, cancelled }],
-    //     doctors:    [{ doctor, doctor_name }]   (for the filter) }
-    //
-    // STILL UNCONFIRMED (all guessed):
-    //   - the endpoint: GET /api/clinic/reports/?date_from=&date_to=&doctor=
-    //     (clinic comes from the admin's token).
-    //   - every field name above.
-    //   - which reports the clinic actually wants. Counts are built
-    //     only from booking data we already know exists. Revenue is
-    //     NOT included on purpose: payments go through Paystack and
-    //     we don't know yet what the backend stores or exposes.
-    //   - whether the cancellation rate should count only cancellations
-    //     by the clinic, or all of them. This page counts all.
-    //   - the clinic's timezone for grouping by day.
-    //
-    // The mock bookings are generated, not real: roughly 60 days of
-    // past bookings, so the page isn't empty.
-    //
-    // TODO once login routing exists for CLINIC_ADMIN: redirect
-    // anyone else away from this page. That redirect is UX only;
-    // the backend must enforce access and clinic isolation.
+    // TODO: confirm with Ntsako that `doctor_id` is the doctor PROFILE id
+    // (the same number as `doctor` in each booking), since the filter
+    // dropdown is built from the bookings.
     // =========================================================
 
-    const MOCK_CLINIC_NAME = "Sandton Family Practice";
-
-    const MOCK_DOCTORS = [
-        { doctor: 1, doctor_name: "Lebo Rantao" },
-        { doctor: 2, doctor_name: "Mihlali Kane" },
-        { doctor: 3, doctor_name: "Zanele Khumalo" }
-    ];
+    const PAGE_SIZE = 100;   // the backend maximum
+    const MAX_PAGES = 50;    // safety stop at 5,000 bookings
 
     const STATUS_LABELS = {
         PENDING_PAYMENT: 'Pending payment',
@@ -472,62 +456,82 @@
         return copy;
     }
 
-    // Small seeded generator so the mock data is the same every load.
-    function makeRandom(seed) {
-        let s = seed;
-        return function () {
-            s = (s * 1664525 + 1013904223) % 4294967296;
-            return s / 4294967296;
-        };
+    function describeError(status) {
+        if (status === 401) return 'You are not logged in. Please log in again.';
+        if (status === 403) return "You don't have access to this clinic's reports.";
+        if (status === 404) return 'This clinic was not found.';
+        if (status === 400) return 'The server rejected these filters. Check the dates and try again.';
+        return `Could not load the report (HTTP ${status}).`;
     }
 
-    function buildMockBookings() {
-        const rand = makeRandom(42);
+    // Fetches every page of the report and returns the shape the render
+    // code below reads:
+    //   { clinic_name, total, truncated,
+    //     by_status:  { CONFIRMED: n, ... },
+    //     by_weekday: [n x 7]            (index 0 = Monday),
+    //     by_doctor:  [{ doctor, doctor_name, total, completed, cancelled }],
+    //     doctors:    [{ doctor, doctor_name }]   (for the filter) }
+    async function fetchReport(clinicId, dateFrom, dateTo, doctorId) {
+        const params = new URLSearchParams({
+            date_from: dateFrom,
+            date_to: dateTo,
+            page_size: String(PAGE_SIZE)
+        });
+        if (doctorId) params.set('doctor_id', doctorId);
+
+        let url = `${API_BASE_URL}/api/clinics/${clinicId}/reports/?${params.toString()}`;
+        let firstPage = null;
         const bookings = [];
-        const today = new Date();
+        let pages = 0;
+        let truncated = false;
 
-        for (let i = 1; i <= 60; i++) {
-            const day = addDays(today, -i);
-            if (day.getDay() === 0) continue; // closed Sundays
+        while (url) {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-            const perDay = 1 + Math.floor(rand() * 4); // 1-4 bookings
-            for (let n = 0; n < perDay; n++) {
-                const doc = MOCK_DOCTORS[Math.floor(rand() * MOCK_DOCTORS.length)];
-                const roll = rand();
-                const status = roll < 0.72 ? 'COMPLETED' : (roll < 0.92 ? 'CANCELLED' : 'CONFIRMED');
-                bookings.push({
-                    id: bookings.length + 1,
-                    doctor: doc.doctor,
-                    doctor_name: doc.doctor_name,
-                    appointment_date: toISODate(day),
-                    status: status
-                });
+            if (!response.ok) {
+                const err = new Error('Report request failed');
+                err.status = response.status;
+                throw err;
+            }
+
+            const data = await response.json();
+            const results = data.results || {};
+            if (!firstPage) firstPage = results;
+
+            (results.bookings || []).forEach(b => bookings.push(b));
+
+            pages += 1;
+            url = data.next || null;
+            if (url && pages >= MAX_PAGES) {
+                truncated = true;
+                break;
             }
         }
-        return bookings;
+
+        return buildReport(firstPage || {}, bookings, truncated);
     }
 
-    const MOCK_BOOKINGS = buildMockBookings();
+    function buildReport(firstPage, bookings, truncated) {
+        const summary = firstPage.summary || {};
 
-    // Stands in for the server. Returns the report shape described above.
-    async function fetchReport(dateFrom, dateTo, doctorId) {
-        // TODO: confirm with Ntsako: replace with:
-        //   GET /api/clinic/reports/?date_from=<dateFrom>&date_to=<dateTo>&doctor=<doctorId>
-        // and return the parsed JSON.
+        const byStatus = {
+            PENDING_PAYMENT: summary.pending_payment || 0,
+            PENDING_DOCTOR: summary.pending_doctor || 0,
+            CONFIRMED: summary.confirmed || 0,
+            COMPLETED: summary.completed || 0,
+            CANCELLED: summary.cancelled || 0
+        };
 
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        const rows = MOCK_BOOKINGS
-            .filter(b => b.appointment_date >= dateFrom && b.appointment_date <= dateTo)
-            .filter(b => !doctorId || String(b.doctor) === String(doctorId));
-
-        const byStatus = {};
         const byWeekday = [0, 0, 0, 0, 0, 0, 0];
         const byDoctorMap = {};
 
-        rows.forEach(b => {
-            byStatus[b.status] = (byStatus[b.status] || 0) + 1;
-
+        bookings.forEach(b => {
             const jsDay = new Date(b.appointment_date + 'T00:00:00').getDay(); // Sun=0
             byWeekday[jsDay === 0 ? 6 : jsDay - 1] += 1;
 
@@ -539,13 +543,18 @@
             if (b.status === 'CANCELLED') byDoctorMap[b.doctor].cancelled += 1;
         });
 
+        const byDoctor = Object.values(byDoctorMap).sort((a, b) => b.total - a.total);
+
         return {
-            clinic_name: MOCK_CLINIC_NAME,
-            total: rows.length,
+            clinic_name: (firstPage.clinic && firstPage.clinic.name) || '',
+            total: typeof summary.total === 'number' ? summary.total : bookings.length,
+            truncated: truncated,
             by_status: byStatus,
             by_weekday: byWeekday,
-            by_doctor: Object.values(byDoctorMap).sort((a, b) => b.total - a.total),
-            doctors: MOCK_DOCTORS
+            by_doctor: byDoctor,
+            doctors: byDoctor
+                .map(d => ({ doctor: d.doctor, doctor_name: d.doctor_name }))
+                .sort((a, b) => String(a.doctor_name).localeCompare(String(b.doctor_name)))
         };
     }
 
@@ -558,7 +567,7 @@
     }
 
     let currentReport = null;
-    let doctorFilterBuilt = false;
+    let currentClinicId = null;
 
     // =========================================================
     // RUN + RENDER
@@ -583,27 +592,45 @@
             return;
         }
 
+        if (!currentClinicId) return;
+        const clinicId = currentClinicId;
+
+        document.getElementById('loadingState').textContent = 'Loading report...';
         document.getElementById('loadingState').style.display = 'block';
         document.getElementById('reportContent').style.display = 'none';
+        document.getElementById('reportNote').style.display = 'none';
         document.getElementById('exportBtn').disabled = true;
 
         let report;
 
         try {
-            report = await fetchReport(dateFrom, dateTo, doctorId);
+            report = await fetchReport(clinicId, dateFrom, dateTo, doctorId);
         } catch (error) {
             console.error(error);
-            document.getElementById('loadingState').textContent = 'Could not load the report.';
+            if (String(currentClinicId) !== String(clinicId)) return;
+            document.getElementById('loadingState').textContent = error.status
+                ? describeError(error.status)
+                : 'Could not reach the server. Please try again later.';
             return;
         }
+
+        // The admin may have switched clinic while this was loading.
+        if (String(currentClinicId) !== String(clinicId)) return;
 
         currentReport = report;
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('reportContent').style.display = 'block';
 
-        if (!doctorFilterBuilt) {
+        // The doctor list comes from the bookings, so it is rebuilt only on
+        // an unfiltered run; otherwise picking one doctor would hide the rest.
+        if (!doctorId) {
             buildDoctorFilter(report.doctors);
-            doctorFilterBuilt = true;
+        }
+
+        if (report.truncated) {
+            const note = document.getElementById('reportNote');
+            note.textContent = `Very large report: the totals above are complete, but the weekday and doctor breakdowns only count the first ${MAX_PAGES * PAGE_SIZE} bookings. Narrow the date range for exact breakdowns.`;
+            note.style.display = 'block';
         }
 
         renderReport(report);
@@ -627,7 +654,9 @@
     }
 
     function renderReport(r) {
-        document.getElementById('clinicNameLabel').textContent = r.clinic_name;
+        if (r.clinic_name) {
+            document.getElementById('clinicNameLabel').textContent = r.clinic_name;
+        }
 
         const completed = r.by_status.COMPLETED || 0;
         const cancelled = r.by_status.CANCELLED || 0;
@@ -709,11 +738,33 @@
     // INITIAL LOAD: last 30 days
     // =========================================================
 
+    function clinicListError(reason) {
+        let message;
+        if (reason === 401) message = 'You are not logged in. Please log in again.';
+        else if (reason === 403) message = "You don't have access to any clinic.";
+        else if (reason === 'none') message = 'No clinics found.';
+        else if (reason === 0) message = 'Could not reach the server. Please try again later.';
+        else message = `Could not load clinics (HTTP ${reason}).`;
+
+        document.getElementById('loadingState').textContent = message;
+        document.getElementById('loadingState').style.display = 'block';
+    }
+
     (function init() {
         const today = new Date();
         document.getElementById('dateTo').value = toISODate(today);
         document.getElementById('dateFrom').value = toISODate(addDays(today, -30));
-        runReport();
+
+        ClinicContext.init({
+            selectId: 'clinicSelect',
+            onSelect: function (clinicId, clinic) {
+                currentClinicId = clinicId;
+                document.getElementById('clinicNameLabel').textContent = clinic && clinic.name ? clinic.name : '';
+                document.getElementById('filterDoctor').innerHTML = '<option value="">All doctors</option>';
+                runReport();
+            },
+            onError: clinicListError
+        });
     })();
 </script>
 </body>
