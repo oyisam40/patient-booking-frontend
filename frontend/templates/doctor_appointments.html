@@ -300,6 +300,12 @@
     });
 
     // Backend Booking.Status choices: PENDING_PAYMENT, PENDING_DOCTOR, CONFIRMED, CANCELLED, COMPLETED
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     function statusClass(status) {
         if (status === 'CONFIRMED') return 'status-approved';
         if (status === 'CANCELLED') return 'status-rejected';
@@ -315,6 +321,7 @@
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
                     <strong>${appt.patient_name}</strong><br>
+                    ${appt.clinic_name ? `<span class="text-muted small">${escapeHtml(appt.clinic_name)}</span><br>` : ''}
                     <span class="text-muted">${appt.appointment_date} at ${appt.appointment_time}</span>
                 </div>
                 <span class="status-badge ${statusClass(appt.status)}">${appt.status_display}</span>
