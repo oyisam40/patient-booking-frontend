@@ -84,3 +84,24 @@ def doctor_documents(request):
 def admin_document_review(request):
     return render(request, 'admin_document_review.html')
 
+def admin_clinic_management(request):
+    return render(request, 'admin_clinic_management.html')
+
+def clinic_doctors_staff(request):
+    return render(request, 'clinic_doctors_staff.html')
+
+def clinic_appointments(request):
+    return render(request, 'clinic_appointments.html')
+
+def clinic_calendar(request):
+    return render(request, 'clinic_calendar.html')
+
+def clinic_settings(request):
+    return render(request, 'clinic_settings.html')
+
+def clinic_dashboard(request):
+    return render(request, 'clinic_dashboard.html')
+
+def clinic_reports(request):
+    return render(request, 'clinic_reports.html')
+

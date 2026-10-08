@@ -178,9 +178,16 @@
 <div class="page-card">
     <h1 class="h3 mb-4 text-center font-weight-normal">Find a Doctor</h1>
 
-    <div id="filterBanner" class="alert alert-info d-flex justify-content-between align-items-center" style="display:none;">
+    <div id="filterBanner" class="alert alert-info justify-content-between align-items-center" style="display:none;">
         <span id="filterBannerText"></span>
         <a href="{% url 'browse_doctors' %}" class="btn btn-sm btn-outline-secondary">Clear filter</a>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="clinicFilter">Clinic</label>
+        <select id="clinicFilter" class="form-control">
+            <option value="">Select a clinic...</option>
+        </select>
     </div>
 
     <div class="mb-4">
@@ -198,12 +205,16 @@
         </select>
     </div>
 
-    <div class="text-center" id="loadingState">
+    <div id="clinicPrompt" class="text-center text-muted" style="display:none;">
+        <p>Choose a clinic to see its doctors.</p>
+    </div>
+
+    <div class="text-center" id="loadingState" style="display:none;">
         <p class="text-muted">Loading doctors...</p>
     </div>
 
     <div id="emptyState" class="text-center text-muted" style="display:none;">
-        <p>No doctors found.</p>
+        <p id="emptyStateText">No doctors found.</p>
     </div>
 
     <div id="errorState" class="text-center text-danger" style="display:none;">
@@ -225,21 +236,120 @@
         window.location.href = "{% url 'home' %}";
     });
 
-    async function loadDoctors(specialty) {
-        document.getElementById('loadingState').style.display = 'block';
-        document.getElementById('emptyState').style.display = 'none';
-        document.getElementById('errorState').style.display = 'none';
-        document.getElementById('doctorList').innerHTML = '';
+    // The patient picks a clinic first. Only that clinic's doctors are
+    // loaded (GET /api/clinics/{id}/doctors/), so a doctor from another
+    // clinic can never be shown or carried over when the clinic changes.
+    let clinicDoctors = [];   // doctors of the selected clinic, kept so the specialty filter needs no new request
+    let selectedClinicId = '';
+
+    // Names are typed in by users and end up inside innerHTML below,
+    // so they are escaped first.
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    // "General Practice", "general-practice" and "general_practice" all compare equal.
+    function normalizeSpecialty(value) {
+        return String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+    }
+
+    function rememberClinic(id) {
+        try { sessionStorage.setItem('selectedClinicId', id); } catch (e) { /* storage unavailable: ignore */ }
+    }
+
+    function recallClinic() {
+        try { return sessionStorage.getItem('selectedClinicId') || ''; } catch (e) { return ''; }
+    }
+
+    function setState(state) {
+        document.getElementById('clinicPrompt').style.display = state === 'prompt' ? 'block' : 'none';
+        document.getElementById('loadingState').style.display = state === 'loading' ? 'block' : 'none';
+        document.getElementById('emptyState').style.display = state === 'empty' ? 'block' : 'none';
+        document.getElementById('errorState').style.display = state === 'error' ? 'block' : 'none';
+        if (state !== 'list') {
+            document.getElementById('doctorList').innerHTML = '';
+        }
+    }
+
+    function showError(message) {
+        setState('error');
+        document.getElementById('errorState').textContent = message;
+    }
+
+    async function loadClinics() {
+        setState('loading');
+        let clinics;
 
         try {
-            let url = API_BASE_URL + '/api/doctors/doctors/';
-            if (specialty) {
-                url += `?specialty=${specialty}`;
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(API_BASE_URL + '/api/clinics/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch clinics');
             }
 
-            const token = localStorage.getItem('accessToken');
+            const data = await response.json();
+            clinics = data.clinics || data.results || data;
+        } catch (error) {
+            console.error(error);
+            showError('Could not load clinics. Please try again later.');
+            return;
+        }
 
-            const response = await fetch(url, {
+        if (!Array.isArray(clinics)) {
+            showError('Could not load clinics. Please try again later.');
+            return;
+        }
+
+        clinics = clinics.filter(c => c.is_active !== false);
+
+        const select = document.getElementById('clinicFilter');
+        select.innerHTML = '<option value="">Select a clinic...</option>' +
+            clinics.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+
+        if (clinics.length === 0) {
+            setState('empty');
+            document.getElementById('emptyStateText').textContent = 'No clinics are available yet.';
+            return;
+        }
+
+        // Pick a clinic automatically: the one in the URL, else the one
+        // remembered from earlier, else the only one there is.
+        const fromUrl = new URLSearchParams(window.location.search).get('clinic') || '';
+        const candidates = [fromUrl, recallClinic()];
+        let chosen = candidates.find(id => id && clinics.some(c => String(c.id) === String(id))) || '';
+
+        if (!chosen && clinics.length === 1) {
+            chosen = String(clinics[0].id);
+        }
+
+        if (chosen) {
+            select.value = chosen;
+            rememberClinic(chosen);
+            loadClinicDoctors(chosen);
+        } else {
+            setState('prompt');
+        }
+    }
+
+    async function loadClinicDoctors(clinicId) {
+        selectedClinicId = String(clinicId);
+        clinicDoctors = [];
+        setState('loading');
+
+        let doctors;
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`${API_BASE_URL}/api/clinics/${clinicId}/doctors/`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -252,20 +362,88 @@
             }
 
             const data = await response.json();
-            document.getElementById('loadingState').style.display = 'none';
+            doctors = data.doctors || data.results || data;
 
-            const results = data.doctors || data.results || data;
-
-            if (results.length === 0) {
-                document.getElementById('emptyState').style.display = 'block';
-            } else {
-                renderDoctors(results);
+            // TEMPORARY: the clinic doctors endpoint has no profile id yet.
+            // Borrow it from the general doctors list. Remove this block
+            // once Ntsako adds `id` to /api/clinics/{id}/doctors/.
+            if (Array.isArray(doctors) && doctors.some(d => d.id === undefined)) {
+                const profileResponse = await fetch(`${API_BASE_URL}/api/doctors/doctors/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (profileResponse.ok) {
+                    const profileData = await profileResponse.json();
+                    const profiles = profileData.doctors || profileData.results || profileData;
+                    doctors = attachProfileIds(doctors, Array.isArray(profiles) ? profiles : []);
+                }
             }
         } catch (error) {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'block';
             console.error(error);
+            if (selectedClinicId === String(clinicId)) {
+                showError('Could not load doctors. Please try again later.');
+            }
+            return;
         }
+
+        // The patient may have switched clinic while this request was
+        // running. Ignore the late answer so it can't overwrite the list.
+        if (selectedClinicId !== String(clinicId)) {
+            return;
+        }
+
+        clinicDoctors = Array.isArray(doctors) ? doctors : [];
+        applySpecialtyFilter();
+    }
+
+    function doctorKey(name, qualification, years, fee) {
+        return [
+            String(name || '').trim().toLowerCase(),
+            String(qualification || '').trim().toLowerCase(),
+            Number(years),
+            Number(fee)
+        ].join('|');
+    }
+
+    // TEMPORARY matching of clinic doctors to profile ids (see above).
+    function attachProfileIds(clinicList, profiles) {
+        const byKey = {};
+        profiles.forEach(p => {
+            const name = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`;
+            byKey[doctorKey(name, p.qualification, p.years_of_experience, p.consultation_fee)] = p.id;
+        });
+
+        return clinicList.map(d => {
+            const key = doctorKey(d.name, d.qualification, d.years_of_experience, d.consultation_fee);
+            return Object.assign({}, d, { id: d.id !== undefined ? d.id : byKey[key] });
+        });
+    }
+
+    // The clinic doctors endpoint has no specialty parameter, so the
+    // filter runs here on the doctors already loaded.
+    function applySpecialtyFilter() {
+        if (!selectedClinicId) {
+            return;
+        }
+
+        const specialty = document.getElementById('specialtyFilter').value;
+        const filtered = specialty
+            ? clinicDoctors.filter(d => normalizeSpecialty(d.specialization) === normalizeSpecialty(specialty))
+            : clinicDoctors;
+
+        if (filtered.length === 0) {
+            setState('empty');
+            document.getElementById('emptyStateText').textContent = clinicDoctors.length === 0
+                ? 'This clinic has no available doctors yet.'
+                : 'No doctors at this clinic match that specialty.';
+            return;
+        }
+
+        setState('list');
+        renderDoctors(filtered);
     }
 
     function renderDoctors(doctors) {
@@ -274,44 +452,51 @@
         list.innerHTML = doctors.map(doc => `
         <div class="doctor-row">
             <div>
-                <div class="doctor-name">Dr. ${doc.first_name} ${doc.last_name}</div>
-                <div class="doctor-specialty">${doc.specialization || ''}</div>
+                <div class="doctor-name">Dr. ${escapeHtml(doc.name || `${doc.first_name || ''} ${doc.last_name || ''}`.trim())}</div>
+                <div class="doctor-specialty">${escapeHtml(doc.specialization || '')}</div>
             </div>
             <div class="text-end">
-                <a href="/doctors/${doc.id}/" class="btn btn-teal btn-sm mt-1">View Profile</a>
+                ${doc.id !== undefined
+                    ? `<a href="/doctors/${encodeURIComponent(doc.id)}/?clinic=${encodeURIComponent(selectedClinicId)}" class="btn btn-teal btn-sm mt-1">View Profile</a>`
+                    : `<span class="text-muted small">Profile unavailable</span>`}
             </div>
         </div>
         `).join('');
     }
 
-    document.getElementById('specialtyFilter').addEventListener('change', function() {
-        loadDoctors(this.value);
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const urlParams = new URLSearchParams(window.location.search);
-
-        const specialtyParam = urlParams.get('specialty');
-
-        const select = document.getElementById('specialtyFilter');
-
-        if (specialtyParam) {
-        const matchingOption = select.querySelector(`option[value="${specialtyParam}"]`);
-
-        if (matchingOption) {
-            select.value = specialtyParam;
-
-            document.getElementById('filterBannerText').textContent =
-                `Showing ${matchingOption.textContent} based on your symptoms`;
-            document.getElementById('filterBanner').style.display = 'flex';
-
-            loadDoctors(specialtyParam);
+    document.getElementById('clinicFilter').addEventListener('change', function () {
+        if (!this.value) {
+            selectedClinicId = '';
+            clinicDoctors = [];
+            setState('prompt');
             return;
         }
 
-    }
+        rememberClinic(this.value);
+        loadClinicDoctors(this.value);
+    });
 
-    loadDoctors('');
+    document.getElementById('specialtyFilter').addEventListener('change', applySpecialtyFilter);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Coming from the symptom checker: ?specialty=<code> pre-selects
+        // the specialty and shows the banner.
+        const specialtyParam = new URLSearchParams(window.location.search).get('specialty');
+
+        if (specialtyParam) {
+            const select = document.getElementById('specialtyFilter');
+            const matchingOption = select.querySelector(`option[value="${specialtyParam}"]`);
+
+            if (matchingOption) {
+                select.value = specialtyParam;
+
+                document.getElementById('filterBannerText').textContent =
+                    `Showing ${matchingOption.textContent} based on your symptoms`;
+                document.getElementById('filterBanner').style.display = 'flex';
+            }
+        }
+
+        loadClinics();
     });
 </script>
 </body>

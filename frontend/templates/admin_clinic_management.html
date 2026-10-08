@@ -1,0 +1,644 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Manage Clinics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+
+        .page-card {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .page-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .clinic-row {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clinic-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .clinic-name {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .clinic-meta {
+            font-size: 13px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .clinic-status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .clinic-status-badge.active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .clinic-status-badge.inactive {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+        .btn-teal:disabled {
+            background-color: #8fc7ce;
+            border-color: #8fc7ce;
+        }
+
+        .modal-backdrop-custom {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 40px 20px;
+        }
+
+        .modal-backdrop-custom.open {
+            display: flex;
+        }
+
+        .onboard-modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+        }
+
+        .form-section-label {
+            font-weight: 700;
+            font-size: 14px;
+            color: #1B9AAA;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .form-section-label:first-of-type {
+            margin-top: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 30px 0;
+        }
+
+        .loading-state {
+            text-align: center;
+            color: #999;
+            padding: 30px 0;
+        }
+    </style>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Manage Clinics</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'admin_dashboard' %}" class="sidebar-link">Dashboard</a>
+            <a href="{% url 'admin_doctor_management' %}" class="sidebar-link">Manage Doctors</a>
+            <a href="{% url 'admin_patient_management' %}" class="sidebar-link">Manage Patients</a>
+            <a href="{% url 'admin_document_review' %}" class="sidebar-link">Document Review</a>
+            <a href="{% url 'admin_clinic_management' %}" class="sidebar-link active">Manage Clinics</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+        <div class="page-card">
+            <div class="page-header-row">
+                <h1 class="h3 mb-0 font-weight-normal">Clinics</h1>
+                <button type="button" class="btn btn-teal" id="openOnboardModalBtn">+ Add New Clinic</button>
+            </div>
+
+            <div class="alert alert-success" id="pageNotice" style="display:none;"></div>
+            <div class="loading-state" id="loadingState">Loading clinics...</div>
+            <div class="empty-state" id="emptyState" style="display:none;">No clinics registered yet.</div>
+            <div id="clinicList"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop-custom" id="onboardModalBackdrop">
+        <div class="onboard-modal">
+            <h5 class="mb-1">Add New Clinic</h5>
+            <p class="text-muted mb-3" style="font-size: 13px;">
+                This creates the clinic only. Assign its administrator afterwards with "Assign Admin".
+            </p>
+
+            <div class="mb-3">
+                <label class="form-label" for="clinicName">Clinic name</label>
+                <input type="text" id="clinicName" class="form-control" placeholder="e.g. Sandton Family Practice">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="clinicRegNumber">Registration number</label>
+                <input type="text" id="clinicRegNumber" class="form-control" placeholder="e.g. CLINIC-003">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="clinicEmail">Clinic email</label>
+                <input type="email" id="clinicEmail" class="form-control" placeholder="contact@clinic.com">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="clinicPhone">Clinic phone</label>
+                <input type="tel" id="clinicPhone" class="form-control" placeholder="+27...">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="clinicAddress">Clinic address</label>
+                <input type="text" id="clinicAddress" class="form-control" placeholder="Street, city">
+            </div>
+
+            <div id="onboardError" class="text-danger mb-3" style="display:none; white-space: pre-line;"></div>
+
+            <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-outline-secondary w-100" id="onboardModalDismiss">Cancel</button>
+                <button type="button" class="btn btn-teal w-100" id="onboardModalConfirm">Create Clinic</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop-custom" id="assignModalBackdrop">
+        <div class="onboard-modal">
+            <h5 class="mb-1">Assign Clinic Administrator</h5>
+            <p class="text-muted mb-3" style="font-size: 13px;" id="assignModalClinic"></p>
+
+            <div class="mb-3">
+                <label class="form-label" for="assignUserId">User ID</label>
+                <input type="number" id="assignUserId" class="form-control" min="1" step="1" placeholder="e.g. 5">
+                <div class="form-text">
+                    The person must already have an account. Their account type does not change;
+                    they are made administrator of this clinic only.
+                </div>
+            </div>
+
+            <div id="assignError" class="text-danger mb-3" style="display:none; white-space: pre-line;"></div>
+
+            <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-outline-secondary w-100" id="assignModalDismiss">Cancel</button>
+                <button type="button" class="btn btn-teal w-100" id="assignModalConfirm">Assign Administrator</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    // =========================================================
+    // CONNECTED TO THE REAL API (Ntsako's clinic handoff)
+    //
+    //   GET  /api/clinics/               list clinics
+    //   POST /api/clinics/               create a clinic ONLY
+    //   POST /api/clinics/{id}/admin/    body { user: <user id> }
+    //                                    makes an existing user the
+    //                                    clinic's administrator
+    //
+    // Creating the clinic and assigning its administrator are two
+    // separate steps. The administrator must already have a user
+    // account; the endpoint does not create one.
+    //
+    // STILL UNCONFIRMED:
+    //   - the response body of POST /api/clinics/ . The page does not
+    //     depend on it: it reloads the list after a create.
+    //   - how a platform admin finds a user's id. This form asks for
+    //     the numeric id. Asking Ntsako whether the endpoint can also
+    //     accept an email or username.
+    //   - whether assigning replaces an existing clinic admin or adds
+    //     a second one (the earlier agreement was exactly one).
+    //   - which create-clinic fields are required besides the name.
+    //   - deleting or deactivating a clinic. No endpoint was given, so
+    //     there is no delete button.
+    //   - the list shows no administrator name or doctor count. The
+    //     list endpoint does not return them, and the platform admin
+    //     is not meant to see clinic-internal data anyway.
+    //
+    // TODO: restrict this page to platform admins (User.role = ADMIN).
+    // That redirect is UX only; the backend already enforces it.
+    // =========================================================
+
+    let clinics = [];
+    let assignTargetId = null;
+
+    function authHeaders() {
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
+    // Clinic names and addresses are typed in by users and end up
+    // inside innerHTML below, so they are escaped first.
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    async function readJson(response) {
+        try {
+            return await response.json();
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Turns a backend error body ({detail: "..."} or {field: ["msg"]})
+    // into readable lines.
+    function describeError(data) {
+        if (!data) return 'Something went wrong. Please try again.';
+        if (typeof data === 'string') return data;
+        if (data.detail) return String(data.detail);
+
+        const lines = Object.entries(data).map(function (entry) {
+            const field = entry[0];
+            const value = entry[1];
+            const text = Array.isArray(value) ? value.join(' ') : (typeof value === 'object' ? JSON.stringify(value) : value);
+            return `${field}: ${text}`;
+        });
+
+        return lines.length ? lines.join('\n') : 'Something went wrong. Please try again.';
+    }
+
+    function showNotice(message) {
+        const notice = document.getElementById('pageNotice');
+        notice.textContent = message;
+        notice.style.display = 'block';
+    }
+
+    // =========================================================
+    // LOAD CLINICS
+    // =========================================================
+
+    async function loadClinics() {
+        let list;
+
+        try {
+            const response = await fetch(API_BASE_URL + '/api/clinics/', {
+                method: 'GET',
+                headers: authHeaders()
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch clinics');
+            }
+
+            const data = await response.json();
+            list = data.clinics || data.results || data;
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('loadingState').textContent = 'Could not load clinics.';
+            return;
+        }
+
+        clinics = Array.isArray(list) ? list : [];
+        document.getElementById('loadingState').style.display = 'none';
+        renderClinicList();
+    }
+
+    function renderClinicList() {
+        const container = document.getElementById('clinicList');
+        const emptyState = document.getElementById('emptyState');
+
+        if (clinics.length === 0) {
+            emptyState.style.display = 'block';
+            container.innerHTML = '';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+
+        container.innerHTML = clinics.map(clinic => {
+            const isActive = clinic.is_active !== false;
+            const contact = [clinic.email, clinic.phone_number].filter(Boolean).map(escapeHtml).join(' &middot; ');
+
+            return `
+            <div class="clinic-row">
+                <div>
+                    <div class="clinic-name">${escapeHtml(clinic.name)}</div>
+                    <div class="clinic-meta">${escapeHtml(clinic.registration_number || '')}</div>
+                    <div class="clinic-meta">${contact}</div>
+                    ${clinic.address ? `<div class="clinic-meta">${escapeHtml(clinic.address)}</div>` : ''}
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="clinic-status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary assign-btn" data-id="${escapeHtml(clinic.id)}">Assign Admin</button>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.assign-btn').forEach(btn => {
+            btn.addEventListener('click', () => openAssignModal(btn.getAttribute('data-id')));
+        });
+    }
+
+    // =========================================================
+    // ADD NEW CLINIC
+    // =========================================================
+
+    document.getElementById('openOnboardModalBtn').addEventListener('click', function () {
+        document.getElementById('onboardModalBackdrop').classList.add('open');
+    });
+
+    document.getElementById('onboardModalDismiss').addEventListener('click', closeOnboardModal);
+
+    function closeOnboardModal() {
+        document.getElementById('onboardModalBackdrop').classList.remove('open');
+        document.getElementById('onboardError').style.display = 'none';
+        ['clinicName', 'clinicRegNumber', 'clinicEmail', 'clinicPhone', 'clinicAddress']
+            .forEach(id => document.getElementById(id).value = '');
+    }
+
+    document.getElementById('onboardModalConfirm').addEventListener('click', async function () {
+        const errorBox = document.getElementById('onboardError');
+        const confirmBtn = this;
+        errorBox.style.display = 'none';
+
+        const body = {
+            name: document.getElementById('clinicName').value.trim(),
+            registration_number: document.getElementById('clinicRegNumber').value.trim(),
+            email: document.getElementById('clinicEmail').value.trim(),
+            phone_number: document.getElementById('clinicPhone').value.trim(),
+            address: document.getElementById('clinicAddress').value.trim()
+        };
+
+        if (!body.name || !body.registration_number || !body.email) {
+            errorBox.textContent = 'Please fill in the clinic name, registration number and email.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        let response;
+        let data;
+
+        try {
+            response = await fetch(API_BASE_URL + '/api/clinics/', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(body)
+            });
+            data = await readJson(response);
+        } catch (error) {
+            console.error(error);
+            errorBox.textContent = 'Network error: could not create the clinic.';
+            errorBox.style.display = 'block';
+            confirmBtn.disabled = false;
+            return;
+        }
+
+        confirmBtn.disabled = false;
+
+        if (!response.ok) {
+            errorBox.textContent = describeError(data);
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        const createdName = body.name;
+        closeOnboardModal();
+        showNotice(`"${createdName}" was created. Use "Assign Admin" on its row to set its administrator.`);
+        loadClinics();
+    });
+
+    // =========================================================
+    // ASSIGN CLINIC ADMINISTRATOR
+    // =========================================================
+
+    function openAssignModal(clinicId) {
+        const clinic = clinics.find(c => String(c.id) === String(clinicId));
+        if (!clinic) return;
+
+        assignTargetId = clinic.id;
+        document.getElementById('assignModalClinic').textContent = clinic.name;
+        document.getElementById('assignUserId').value = '';
+        document.getElementById('assignError').style.display = 'none';
+        document.getElementById('assignModalBackdrop').classList.add('open');
+    }
+
+    function closeAssignModal() {
+        assignTargetId = null;
+        document.getElementById('assignModalBackdrop').classList.remove('open');
+    }
+
+    document.getElementById('assignModalDismiss').addEventListener('click', closeAssignModal);
+
+    document.getElementById('assignModalConfirm').addEventListener('click', async function () {
+        const errorBox = document.getElementById('assignError');
+        const confirmBtn = this;
+        errorBox.style.display = 'none';
+
+        const userId = parseInt(document.getElementById('assignUserId').value, 10);
+
+        if (!Number.isInteger(userId) || userId < 1) {
+            errorBox.textContent = 'Please enter a valid user ID.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        const clinic = clinics.find(c => String(c.id) === String(assignTargetId));
+        confirmBtn.disabled = true;
+        let response;
+        let data;
+
+        try {
+            response = await fetch(`${API_BASE_URL}/api/clinics/${assignTargetId}/admin/`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ user: userId })
+            });
+            data = await readJson(response);
+        } catch (error) {
+            console.error(error);
+            errorBox.textContent = 'Network error: could not assign the administrator.';
+            errorBox.style.display = 'block';
+            confirmBtn.disabled = false;
+            return;
+        }
+
+        confirmBtn.disabled = false;
+
+        if (!response.ok) {
+            errorBox.textContent = describeError(data);
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        const clinicName = clinic ? clinic.name : 'the clinic';
+        closeAssignModal();
+        showNotice(`User ${userId} is now the administrator of ${clinicName}.`);
+    });
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    loadClinics();
+</script>
+</body>
+</html>

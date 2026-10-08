@@ -52,4 +52,18 @@ urlpatterns = [
     path('verification-documents/', views.doctor_documents, name='doctor_documents'),
 
     path('admin-document-review/', views.admin_document_review, name='admin_document_review'),
+
+    path('admin-clinic-management/', views.admin_clinic_management, name='admin_clinic_management'),
+
+    path('clinic-doctors-staff/', views.clinic_doctors_staff, name='clinic_doctors_staff'),
+
+    path('clinic-appointments/', views.clinic_appointments, name='clinic_appointments'),
+
+    path('clinic-calendar/', views.clinic_calendar, name='clinic_calendar'),
+
+    path('clinic-settings/', views.clinic_settings, name='clinic_settings'),
+
+    path('clinic-dashboard/', views.clinic_dashboard, name='clinic_dashboard'),
+
+    path('clinic-reports/', views.clinic_reports, name='clinic_reports'),
 ]

@@ -1,0 +1,450 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Clinic Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+
+        .page-card {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .clinic-name-label {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 18px 20px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: #1B9AAA;
+            line-height: 1.1;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .appt-row {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 14px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .appt-time {
+            min-width: 60px;
+            color: #1B9AAA;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .appt-details {
+            flex: 1;
+        }
+
+        .appt-patient {
+            font-weight: 700;
+        }
+
+        .appt-meta {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .appt-status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-confirmed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-completed {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .quick-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+
+        .empty-state,
+        .loading-state {
+            text-align: center;
+            color: #999;
+            padding: 30px 0;
+        }
+
+        @media (max-width: 900px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-card {
+                padding: 24px 16px;
+            }
+            .appt-row {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Dashboard</span>
+    </header>
+
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="{% url 'clinic_dashboard' %}" class="sidebar-link active">Dashboard</a>
+            <a href="{% url 'clinic_doctors_staff' %}" class="sidebar-link">Doctors &amp; Staff</a>
+            <a href="{% url 'clinic_calendar' %}" class="sidebar-link">Calendar</a>
+            <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments</a>
+            <a href="{% url 'clinic_reports' %}" class="sidebar-link">Reports</a>
+            <a href="{% url 'clinic_settings' %}" class="sidebar-link">Clinic Settings</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+        <div class="page-card">
+            <h1 class="h3 mb-1 font-weight-normal">Dashboard</h1>
+            <div class="clinic-name-label" id="clinicNameLabel"></div>
+
+            <div class="loading-state" id="loadingState">Loading dashboard...</div>
+
+            <div id="dashboardContent" style="display:none;">
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statToday">0</div>
+                        <div class="stat-label">Appointments today</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statPendingDoctor">0</div>
+                        <div class="stat-label">Awaiting doctor</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statPendingPayment">0</div>
+                        <div class="stat-label">Awaiting payment</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statDoctors">0</div>
+                        <div class="stat-label">Active doctors</div>
+                    </div>
+                </div>
+
+                <div class="section-title">Today's Schedule</div>
+                <div class="empty-state" id="emptyState" style="display:none;">No appointments scheduled for today.</div>
+                <div id="todayList"></div>
+
+                <div class="quick-links">
+                    <a href="{% url 'clinic_calendar' %}" class="btn btn-teal">View Calendar</a>
+                    <a href="{% url 'clinic_appointments' %}" class="btn btn-outline-secondary">All Appointments</a>
+                    <a href="{% url 'clinic_doctors_staff' %}" class="btn btn-outline-secondary">Manage Doctors &amp; Staff</a>
+                    <a href="{% url 'clinic_reports' %}" class="btn btn-outline-secondary">View Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    // =========================================================
+    // PLACEHOLDER DATA
+    //
+    // Ntsako's clinic endpoints don't exist yet, so the data below
+    // stands in for a real API call.
+    //
+    // The mock mimics ONE summary response so the page only needs a
+    // single request. When the real endpoint exists, only
+    // loadDashboard() has to change; the render code reads the shape
+    // below.
+    //
+    // STILL UNCONFIRMED (all guessed):
+    //   - the endpoint: GET /api/clinic/dashboard/ (clinic comes from
+    //     the admin's token). Alternative: compute these counts here
+    //     from GET /api/clinic/bookings/ and the doctors endpoint.
+    //   - every field name in the summary below:
+    //       clinic_name, today_count, pending_doctor_count,
+    //       pending_payment_count, active_doctor_count,
+    //       todays_appointments: [{ id, patient_name, doctor_name,
+    //       appointment_time, status, status_display, reason }]
+    //   - what "today" means. It should be the clinic's timezone,
+    //     decided by the server, not the admin's browser.
+    //
+    // TODO once login routing exists for CLINIC_ADMIN: redirect
+    // anyone else away from this page. That redirect is UX only;
+    // the backend must enforce access and clinic isolation.
+    // =========================================================
+
+    const MOCK_SUMMARY = {
+        clinic_name: "Sandton Family Practice",
+        today_count: 4,
+        pending_doctor_count: 2,
+        pending_payment_count: 1,
+        active_doctor_count: 3,
+        todays_appointments: [
+            { id: 101, patient_name: "Oyisa Mjali",  doctor_name: "Mihlali Kane",   appointment_time: "09:00:00", status: "CONFIRMED",      status_display: "Confirmed",      reason: "Follow-up consultation" },
+            { id: 102, patient_name: "Khaya Mkhize", doctor_name: "Lebo Rantao",    appointment_time: "10:00:00", status: "PENDING_DOCTOR", status_display: "Pending doctor", reason: "Knee pain" },
+            { id: 103, patient_name: "Naledi Dube",  doctor_name: "Zanele Khumalo", appointment_time: "11:00:00", status: "CONFIRMED",      status_display: "Confirmed",      reason: "Child vaccination" },
+            { id: 105, patient_name: "Thabo Nkosi",  doctor_name: "Lebo Rantao",    appointment_time: "14:00:00", status: "COMPLETED",      status_display: "Completed",      reason: "Sports injury review" }
+        ]
+    };
+
+    // Names and reasons are typed in by users and end up inside
+    // innerHTML below, so they are escaped first.
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    function statusClass(status) {
+        if (status === 'CONFIRMED') return 'status-confirmed';
+        if (status === 'COMPLETED') return 'status-completed';
+        if (status === 'CANCELLED') return 'status-cancelled';
+        return 'status-pending'; // PENDING_PAYMENT, PENDING_DOCTOR
+    }
+
+    async function loadDashboard() {
+        // TODO: confirm with Ntsako: replace with:
+        //   GET /api/clinic/dashboard/
+
+        let summary;
+
+        try {
+            // Simulating a network call with mock data for now.
+            await new Promise(resolve => setTimeout(resolve, 300));
+            summary = JSON.parse(JSON.stringify(MOCK_SUMMARY));
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loadingState').textContent = 'Could not load the dashboard.';
+            return;
+        }
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+        renderDashboard(summary);
+    }
+
+    function renderDashboard(s) {
+        document.getElementById('clinicNameLabel').textContent = s.clinic_name;
+        document.getElementById('statToday').textContent = s.today_count;
+        document.getElementById('statPendingDoctor').textContent = s.pending_doctor_count;
+        document.getElementById('statPendingPayment').textContent = s.pending_payment_count;
+        document.getElementById('statDoctors').textContent = s.active_doctor_count;
+
+        const list = document.getElementById('todayList');
+        const emptyState = document.getElementById('emptyState');
+        const appts = (s.todays_appointments || []).slice()
+            .sort((a, b) => String(a.appointment_time).localeCompare(String(b.appointment_time)));
+
+        if (appts.length === 0) {
+            list.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        list.innerHTML = appts.map(a => `
+            <div class="appt-row">
+                <div class="appt-time">${escapeHtml(String(a.appointment_time).slice(0, 5))}</div>
+                <div class="appt-details">
+                    <div class="appt-patient">${escapeHtml(a.patient_name)}</div>
+                    <div class="appt-meta">with Dr. ${escapeHtml(a.doctor_name)}${a.reason ? ' &middot; ' + escapeHtml(a.reason) : ''}</div>
+                </div>
+                <span class="appt-status-badge ${statusClass(a.status)}">${escapeHtml(a.status_display || a.status)}</span>
+            </div>
+        `).join('');
+    }
+
+    loadDashboard();
+</script>
+</body>
+</html>

@@ -1,0 +1,670 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Doctors &amp; Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+
+        .page-card {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .page-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .clinic-name-label {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .member-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .member-tab {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #555;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .member-tab.active {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: #fff;
+        }
+
+        .member-tab-count {
+            margin-left: 6px;
+            opacity: 0.8;
+            font-size: 12px;
+        }
+
+        .member-row {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 16px 22px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .member-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .member-name {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .member-meta {
+            font-size: 13px;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .member-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .member-status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .member-status-badge.active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .member-status-badge.inactive {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+
+        .modal-backdrop-custom {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1050;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 40px 20px;
+        }
+
+        .modal-backdrop-custom.open {
+            display: flex;
+        }
+
+        .add-modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+        }
+
+        .empty-state,
+        .loading-state {
+            text-align: center;
+            color: #999;
+            padding: 30px 0;
+        }
+    </style>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Doctors &amp; Staff</span>
+    </header>
+
+    <!-- Clinic admin sidebar. Links to pages that aren't built yet use
+         href="#" on purpose — a Django url tag pointing at a route that
+         doesn't exist yet would crash this page with NoReverseMatch.
+         Swap each "#" for a real url tag as that page gets built. -->
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="#" class="sidebar-link">Dashboard</a>
+            <a href="{% url 'clinic_doctors_staff' %}" class="sidebar-link active">Doctors &amp; Staff</a>
+            <a href="#" class="sidebar-link">Calendar</a>
+            <a href="#" class="sidebar-link">Appointments &amp; Reports</a>
+            <a href="#" class="sidebar-link">Clinic Settings</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+        <div class="page-card">
+            <div class="page-header-row">
+                <h1 class="h3 mb-0 font-weight-normal">Doctors &amp; Staff</h1>
+                <button type="button" class="btn btn-teal" id="openAddModalBtn">+ Add Doctor</button>
+            </div>
+            <div class="clinic-name-label" id="clinicNameLabel"></div>
+
+            <div class="member-tabs">
+                <button type="button" class="member-tab active" id="tabDoctors">
+                    Doctors<span class="member-tab-count" id="doctorsTabCount">0</span>
+                </button>
+                <button type="button" class="member-tab" id="tabStaff">
+                    Staff<span class="member-tab-count" id="staffTabCount">0</span>
+                </button>
+            </div>
+
+            <div class="loading-state" id="loadingState">Loading...</div>
+            <div class="empty-state" id="emptyState" style="display:none;"></div>
+            <div id="memberList"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop-custom" id="addModalBackdrop">
+        <div class="add-modal">
+            <h5 class="mb-3" id="addModalTitle">Add Doctor</h5>
+
+            <div class="mb-3">
+                <label class="form-label">First name</label>
+                <input type="text" id="addFirstName" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Last name</label>
+                <input type="text" id="addLastName" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" id="addEmail" class="form-control">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Phone</label>
+                <input type="tel" id="addPhone" class="form-control" placeholder="+27...">
+            </div>
+
+            <div class="mb-3" id="doctorOnlyFields">
+                <label class="form-label">Specialization</label>
+                <select id="addSpecialization" class="form-select">
+                    <option value="" selected disabled>Select a specialization</option>
+                    <option value="general_practice">General Practitioner</option>
+                    <option value="cardiology">Cardiologist</option>
+                    <option value="dermatology">Dermatologist</option>
+                    <option value="dentistry">Dentist</option>
+                    <option value="ent">ENT Specialist</option>
+                    <option value="ophthalmology">Ophthalmologist</option>
+                    <option value="orthopedics">Orthopedic Specialist</option>
+                    <option value="pediatrics">Pediatrician</option>
+                </select>
+            </div>
+
+            <div class="mb-3" id="staffOnlyFields" style="display:none;">
+                <label class="form-label">Job title</label>
+                <input type="text" id="addJobTitle" class="form-control" placeholder="e.g. Receptionist">
+            </div>
+
+            <div id="addError" class="text-danger mb-3" style="display:none;"></div>
+
+            <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-outline-secondary w-100" id="addModalDismiss">Cancel</button>
+                <button type="button" class="btn btn-teal w-100" id="addModalConfirm">Add</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    // =========================================================
+    // PLACEHOLDER DATA
+    //
+    // Ntsako's clinic endpoints don't exist yet, so everything
+    // below stands in for real API calls.
+    //
+    // Confirmed from discussion with Ntsako:
+    //   - CLINIC_ADMIN is its own role, exactly one per clinic
+    //   - a doctor belongs to exactly one clinic
+    //   - a clinic admin only ever sees THEIR OWN clinic's data
+    //     (isolation is enforced server-side)
+    //
+    // STILL UNCONFIRMED (guessed below, flagged inline):
+    //   - endpoint paths — guessing /api/clinic/doctors/ and
+    //     /api/clinic/staff/ with the clinic taken from the logged-in
+    //     admin's token (no clinic id in the URL). It could instead be
+    //     /api/clinics/<id>/doctors/.
+    //   - what "add a doctor" means. This form assumes the clinic
+    //     admin creates a brand-new account (like the platform admin
+    //     creating a clinic admin). The alternative is linking a doctor
+    //     who has already registered, by email.
+    //   - whether clinic doctors still go through the platform's
+    //     document verification, given the platform admin can't see
+    //     clinic-internal data. Who verifies them now?
+    //   - staff: is it a new role, and what can they do?
+    //   - deactivate vs delete, and the status values — guessing a
+    //     soft "ACTIVE" / "INACTIVE" status.
+    //   - field names on the returned objects.
+    //
+    // TODO once login routing exists for CLINIC_ADMIN: redirect
+    // anyone else away from this page. Not added now, since no
+    // CLINIC_ADMIN user exists yet and the page couldn't be tested.
+    // That redirect is UX only — the backend must enforce access.
+    // =========================================================
+
+    const MOCK_CLINIC = { id: 1, name: "Sandton Family Practice" };
+
+    const MOCK_DOCTORS = [
+        { id: 1, first_name: "Lebo", last_name: "Rantao", email: "lebo.rantao@sandtonfamily.co.za", phone: "+27789085645", specialization: "orthopedics", status: "ACTIVE" },
+        { id: 2, first_name: "Mihlali", last_name: "Kane", email: "mihlali.kane@sandtonfamily.co.za", phone: "+27821234567", specialization: "general_practice", status: "ACTIVE" },
+        { id: 3, first_name: "Zanele", last_name: "Khumalo", email: "zanele.khumalo@sandtonfamily.co.za", phone: "+27831112222", specialization: "pediatrics", status: "INACTIVE" },
+    ];
+
+    const MOCK_STAFF = [
+        { id: 1, first_name: "Sipho", last_name: "Mahlangu", email: "sipho.mahlangu@sandtonfamily.co.za", phone: "+27845550001", job_title: "Receptionist", status: "ACTIVE" },
+        { id: 2, first_name: "Anele", last_name: "Botha", email: "anele.botha@sandtonfamily.co.za", phone: "+27845550002", job_title: "Practice Manager", status: "ACTIVE" },
+    ];
+
+    const SPECIALIZATION_LABELS = {
+        general_practice: "General Practitioner",
+        cardiology: "Cardiologist",
+        dermatology: "Dermatologist",
+        dentistry: "Dentist",
+        ent: "ENT Specialist",
+        ophthalmology: "Ophthalmologist",
+        orthopedics: "Orthopedic Specialist",
+        pediatrics: "Pediatrician",
+    };
+
+    let activeTab = 'doctors';
+    let clinicName = '';
+    let doctors = [];
+    let staff = [];
+
+    // Names, emails and job titles are typed in by users and end up
+    // inside innerHTML below, so they are escaped first.
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    // =========================================================
+    // LOAD
+    // =========================================================
+
+    async function loadData() {
+        // TODO: confirm with Ntsako — replace with:
+        //   GET /api/clinic/me/       (this admin's clinic)
+        //   GET /api/clinic/doctors/
+        //   GET /api/clinic/staff/
+
+        try {
+            // Simulating a network call with mock data for now.
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            clinicName = MOCK_CLINIC.name;
+            doctors = MOCK_DOCTORS.map(d => Object.assign({}, d));
+            staff = MOCK_STAFF.map(s => Object.assign({}, s));
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loadingState').textContent = 'Could not load your clinic.';
+            return;
+        }
+
+        document.getElementById('loadingState').style.display = 'none';
+        renderAll();
+    }
+
+    // =========================================================
+    // RENDER
+    // =========================================================
+
+    function renderAll() {
+        document.getElementById('clinicNameLabel').textContent = clinicName;
+        document.getElementById('doctorsTabCount').textContent = doctors.length;
+        document.getElementById('staffTabCount').textContent = staff.length;
+        document.getElementById('openAddModalBtn').textContent =
+            activeTab === 'doctors' ? '+ Add Doctor' : '+ Add Staff Member';
+
+        renderList();
+    }
+
+    function renderList() {
+        const container = document.getElementById('memberList');
+        const emptyState = document.getElementById('emptyState');
+        const members = activeTab === 'doctors' ? doctors : staff;
+
+        if (members.length === 0) {
+            container.innerHTML = '';
+            emptyState.textContent = activeTab === 'doctors' ? 'No doctors added yet.' : 'No staff added yet.';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        container.innerHTML = members.map(memberRowHtml).join('');
+
+        container.querySelectorAll('.toggle-status-btn').forEach(btn => {
+            btn.addEventListener('click', () => toggleStatus(parseInt(btn.getAttribute('data-id'), 10)));
+        });
+    }
+
+    function memberRowHtml(member) {
+        const fullName = `${member.first_name} ${member.last_name}`;
+        const isDoctor = activeTab === 'doctors';
+        const subtitle = isDoctor
+            ? (SPECIALIZATION_LABELS[member.specialization] || member.specialization)
+            : member.job_title;
+        const isActive = member.status === 'ACTIVE';
+
+        return `
+            <div class="member-row">
+                <div>
+                    <div class="member-name">${isDoctor ? 'Dr. ' : ''}${escapeHtml(fullName)}</div>
+                    <div class="member-meta">${escapeHtml(subtitle)}</div>
+                    <div class="member-meta">${escapeHtml(member.email)}${member.phone ? ' &middot; ' + escapeHtml(member.phone) : ''}</div>
+                </div>
+                <div class="member-actions">
+                    <span class="member-status-badge ${member.status.toLowerCase()}">${member.status}</span>
+                    <button type="button"
+                            class="btn btn-sm ${isActive ? 'btn-outline-danger' : 'btn-outline-secondary'} toggle-status-btn"
+                            data-id="${member.id}">
+                        ${isActive ? 'Deactivate' : 'Reactivate'}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    // =========================================================
+    // TABS
+    // =========================================================
+
+    function setActiveTab(tab) {
+        activeTab = tab;
+        document.getElementById('tabDoctors').classList.toggle('active', tab === 'doctors');
+        document.getElementById('tabStaff').classList.toggle('active', tab === 'staff');
+        renderAll();
+    }
+
+    document.getElementById('tabDoctors').addEventListener('click', () => setActiveTab('doctors'));
+    document.getElementById('tabStaff').addEventListener('click', () => setActiveTab('staff'));
+
+    // =========================================================
+    // ACTIVATE / DEACTIVATE
+    // =========================================================
+
+    function toggleStatus(id) {
+        const members = activeTab === 'doctors' ? doctors : staff;
+        const member = members.find(m => m.id === id);
+        if (!member) return;
+
+        const deactivating = member.status === 'ACTIVE';
+        const name = `${member.first_name} ${member.last_name}`;
+        const message = deactivating
+            ? `Deactivate ${name}? They will no longer be available in this clinic.`
+            : `Reactivate ${name}?`;
+
+        if (!confirm(message)) return;
+
+        // TODO: confirm with Ntsako — replace with something like:
+        //   PATCH /api/clinic/doctors/<id>/   { status: "INACTIVE" }
+        // (or a dedicated /deactivate/ endpoint). Also worth asking
+        // what happens to a deactivated doctor's FUTURE bookings.
+
+        member.status = deactivating ? 'INACTIVE' : 'ACTIVE';
+        renderAll();
+    }
+
+    // =========================================================
+    // ADD DOCTOR / STAFF
+    // =========================================================
+
+    const FORM_FIELD_IDS = ['addFirstName', 'addLastName', 'addEmail', 'addPhone', 'addSpecialization', 'addJobTitle'];
+
+    function openAddModal() {
+        const isDoctor = activeTab === 'doctors';
+        document.getElementById('addModalTitle').textContent = isDoctor ? 'Add Doctor' : 'Add Staff Member';
+        document.getElementById('doctorOnlyFields').style.display = isDoctor ? 'block' : 'none';
+        document.getElementById('staffOnlyFields').style.display = isDoctor ? 'none' : 'block';
+        document.getElementById('addModalBackdrop').classList.add('open');
+    }
+
+    function closeAddModal() {
+        document.getElementById('addModalBackdrop').classList.remove('open');
+        document.getElementById('addError').style.display = 'none';
+        FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
+    }
+
+    document.getElementById('openAddModalBtn').addEventListener('click', openAddModal);
+    document.getElementById('addModalDismiss').addEventListener('click', closeAddModal);
+
+    document.getElementById('addModalConfirm').addEventListener('click', async function () {
+        const errorBox = document.getElementById('addError');
+        errorBox.style.display = 'none';
+
+        const isDoctor = activeTab === 'doctors';
+        const firstName = document.getElementById('addFirstName').value.trim();
+        const lastName = document.getElementById('addLastName').value.trim();
+        const email = document.getElementById('addEmail').value.trim();
+        const phone = document.getElementById('addPhone').value.trim();
+        const specialization = document.getElementById('addSpecialization').value;
+        const jobTitle = document.getElementById('addJobTitle').value.trim();
+
+        if (!firstName || !lastName || !email) {
+            errorBox.textContent = 'Please enter a first name, last name and email.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        if (isDoctor && !specialization) {
+            errorBox.textContent = 'Please choose a specialization.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        if (!isDoctor && !jobTitle) {
+            errorBox.textContent = 'Please enter a job title.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        // Only the network call lives inside the try. The UI updates
+        // happen after it, so a bug in rendering can never be
+        // reported to the user as a "network error".
+        let created;
+        try {
+            // TODO: confirm with Ntsako — replace with:
+            //   POST /api/clinic/doctors/   (or /api/clinic/staff/)
+            //   { first_name, last_name, email, phone, specialization | job_title }
+            // and use the object the server returns instead of this one.
+            created = {
+                id: Date.now(),
+                first_name: firstName,
+                last_name: lastName,
+                email: email,
+                phone: phone,
+                status: 'ACTIVE',
+            };
+
+            if (isDoctor) {
+                created.specialization = specialization;
+            } else {
+                created.job_title = jobTitle;
+            }
+
+        } catch (error) {
+            console.error(error);
+            errorBox.textContent = 'Network error: could not add this person.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        (isDoctor ? doctors : staff).push(created);
+        renderAll();
+        closeAddModal();
+    });
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    loadData();
+</script>
+</body>
+</html>

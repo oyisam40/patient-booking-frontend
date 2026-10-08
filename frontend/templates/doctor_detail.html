@@ -96,6 +96,7 @@
         <div class="text-center mb-4">
             <h2 class="doctor-name" id="doctorName"></h2>
             <div class="doctor-specialty" id="doctorSpecialty"></div>
+            <div class="text-muted" id="clinicName" style="font-size: 14px;"></div>
             <div class="rating mt-1">&#9733; <span id="doctorRating"></span></div>
         </div>
 
@@ -140,7 +141,23 @@
     const doctorId = window.location.pathname.split('/').filter(Boolean).pop();
     let selectedSlot = null;
 
+    // The booking is for one clinic. It comes from the link on the Find a
+    // Doctor page (?clinic=<id>), or from the clinic the patient picked there.
+    const urlParams = new URLSearchParams(window.location.search);
+    let clinicId = urlParams.get('clinic');
+    if (!clinicId) {
+        try { clinicId = sessionStorage.getItem('selectedClinicId'); } catch (e) { clinicId = null; }
+    }
+
     async function loadDoctorDetail() {
+        if (!clinicId) {
+            document.getElementById('loadingState').style.display = 'none';
+            const errorState = document.getElementById('errorState');
+            errorState.innerHTML = 'Please choose a clinic first. <a href="{% url 'browse_doctors' %}">Go to Find a Doctor</a>';
+            errorState.style.display = 'block';
+            return;
+        }
+
         try {
             const response = await fetch(`${API_BASE_URL}/api/doctors/doctors/${doctorId}/`, {
                 method: 'GET',
@@ -165,10 +182,36 @@
             document.getElementById('detailContent').style.display = 'block';
 
             loadAvailability();
+            loadClinicName();
 
         } catch (error) {
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('errorState').style.display = 'block';
+            console.error(error);
+        }
+    }
+
+    async function loadClinicName() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/clinics/${clinicId}/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            const clinic = data.clinic || data;
+
+            if (clinic && clinic.name) {
+                document.getElementById('clinicName').textContent = clinic.name;
+            }
+        } catch (error) {
             console.error(error);
         }
     }
@@ -185,7 +228,7 @@
         document.getElementById('bookBtn').disabled = true;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/doctors/${doctorId}/availability/`, {
+            const response = await fetch(`${API_BASE_URL}/api/doctors/${doctorId}/availability/?clinic=${encodeURIComponent(clinicId)}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -317,6 +360,7 @@
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
+                    clinic: parseInt(clinicId),
                     doctor: parseInt(doctorId),
                     appointment_date: dateValue,
                     appointment_time: timeValue + ':00',

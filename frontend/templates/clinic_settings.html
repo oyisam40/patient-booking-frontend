@@ -1,0 +1,672 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOCONNECT - Clinic Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1B9AAA;
+            min-height: 100vh;
+        }
+        .app-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #1B9AAA;
+            cursor: pointer;
+            padding: 4px 10px;
+            margin-right: 12px;
+        }
+        .app-logo {
+            font-weight: 700;
+            color: #1B9AAA;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        .app-page-title {
+            font-size: 16px;
+            color: #555;
+            font-weight: 600;
+        }
+        .app-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 60px);
+            background: #fff;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+        }
+        .sidebar-links {
+            padding: 20px 0;
+        }
+        .sidebar-link {
+            display: block;
+            padding: 12px 24px;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-link:hover {
+            background: #f4f7f8;
+            color: #1B9AAA;
+        }
+        .sidebar-link.active {
+            background: #eafaf9;
+            color: #1B9AAA;
+            border-left-color: #1B9AAA;
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #eee;
+        }
+        .sidebar-logout {
+            background: none;
+            border: none;
+            color: #c0392b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .sidebar-logout:hover {
+            color: #a93226;
+            text-decoration: underline;
+        }
+        .app-content {
+            margin-left: 240px;
+            margin-top: 60px;
+            padding: 40px 20px;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed .app-sidebar {
+            transform: translateX(-100%);
+        }
+        body.sidebar-collapsed .app-content {
+            margin-left: 0;
+        }
+
+        .page-card {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .clinic-name-label {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .settings-section {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 22px 24px;
+            margin-bottom: 20px;
+        }
+
+        .settings-section h2 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .section-hint {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 18px;
+        }
+
+        .hours-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f4f4f4;
+        }
+
+        .hours-row:last-child {
+            border-bottom: none;
+        }
+
+        .hours-day {
+            width: 110px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .hours-row input[type="time"] {
+            max-width: 130px;
+        }
+
+        .hours-closed-label {
+            color: #aaa;
+            font-size: 13px;
+        }
+
+        .hours-sep {
+            color: #888;
+        }
+
+        .field-suffix {
+            font-size: 13px;
+            color: #888;
+            white-space: nowrap;
+        }
+
+        .inline-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .inline-field input {
+            max-width: 110px;
+        }
+
+        .btn-teal {
+            background-color: #1B9AAA;
+            border-color: #1B9AAA;
+            color: white;
+        }
+        .btn-teal:hover {
+            background-color: #16808f;
+            border-color: #16808f;
+            color: white;
+        }
+
+        .save-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .dirty-label {
+            font-size: 13px;
+            color: #e0a800;
+            font-weight: 600;
+        }
+
+        .loading-state {
+            text-align: center;
+            color: #999;
+            padding: 30px 0;
+        }
+
+        @media (max-width: 768px) {
+            .page-card {
+                padding: 24px 16px;
+            }
+            .hours-row {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+<body>
+
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">Clinic Settings</span>
+    </header>
+
+    <!-- Clinic admin sidebar. The Dashboard link uses href="#" on purpose:
+         a Django url tag pointing at a route that doesn't exist yet would
+         crash this page with NoReverseMatch. Swap it for a real url tag
+         once that page is built. -->
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="#" class="sidebar-link">Dashboard</a>
+            <a href="{% url 'clinic_doctors_staff' %}" class="sidebar-link">Doctors &amp; Staff</a>
+            <a href="{% url 'clinic_calendar' %}" class="sidebar-link">Calendar</a>
+            <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments &amp; Reports</a>
+            <a href="{% url 'clinic_settings' %}" class="sidebar-link active">Clinic Settings</a>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+        <div class="page-card">
+            <h1 class="h3 mb-1 font-weight-normal">Clinic Settings</h1>
+            <div class="clinic-name-label" id="clinicNameLabel"></div>
+
+            <div class="loading-state" id="loadingState">Loading settings...</div>
+
+            <form id="settingsForm" style="display:none;" novalidate>
+
+                <div class="settings-section">
+                    <h2>Clinic Details</h2>
+                    <div class="section-hint">How your clinic appears to patients.</div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="clinicName">Clinic name</label>
+                            <input type="text" id="clinicName" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="clinicEmail">Email</label>
+                            <input type="email" id="clinicEmail" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="clinicPhone">Phone</label>
+                            <input type="text" id="clinicPhone" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="clinicAddress">Address</label>
+                            <input type="text" id="clinicAddress" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>Operating Hours</h2>
+                    <div class="section-hint">Patients can only book within these hours. Slots are fixed 1-hour slots.</div>
+                    <div id="hoursList"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>Booking Rules</h2>
+                    <div class="section-hint">Limits on when patients can book.</div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="minNoticeHours">Minimum notice</label>
+                            <div class="inline-field">
+                                <input type="number" id="minNoticeHours" class="form-control" min="0" step="1">
+                                <span class="field-suffix">hours before the appointment</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="maxAdvanceDays">Maximum advance booking</label>
+                            <div class="inline-field">
+                                <input type="number" id="maxAdvanceDays" class="form-control" min="1" step="1">
+                                <span class="field-suffix">days ahead</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>Cancellation Policy</h2>
+                    <div class="section-hint">Applies when a patient or the clinic cancels a booking.</div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="freeCancelHours">Free cancellation window</label>
+                            <div class="inline-field">
+                                <input type="number" id="freeCancelHours" class="form-control" min="0" step="1">
+                                <span class="field-suffix">hours before the appointment</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="lateRefundType">Refund for late cancellations</label>
+                            <select id="lateRefundType" class="form-select">
+                                <option value="NONE">No refund</option>
+                                <option value="PARTIAL">Partial refund</option>
+                                <option value="FULL">Full refund</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="partialPercentGroup" style="display:none;">
+                            <label class="form-label" for="partialRefundPercent">Partial refund amount</label>
+                            <div class="inline-field">
+                                <input type="number" id="partialRefundPercent" class="form-control" min="1" max="99" step="1">
+                                <span class="field-suffix">% of the fee</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-danger mb-3" id="formError" style="display:none;"></div>
+                <div class="text-success mb-3" id="formSuccess" style="display:none;"></div>
+
+                <div class="save-bar">
+                    <button type="submit" class="btn btn-teal" id="saveBtn">Save Settings</button>
+                    <button type="button" class="btn btn-outline-secondary" id="resetBtn">Discard Changes</button>
+                    <span class="dirty-label" id="dirtyLabel" style="display:none;">Unsaved changes</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+    const token = localStorage.getItem('accessToken');
+
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = "{% url 'home' %}";
+    });
+
+    // =========================================================
+    // PLACEHOLDER DATA
+    //
+    // Ntsako's clinic endpoints don't exist yet, so everything
+    // below stands in for real API calls.
+    //
+    // STILL UNCONFIRMED (all guessed):
+    //   - endpoint paths. Guessing GET and PUT /api/clinic/settings/
+    //     (one object for the whole page). The clinic comes from the
+    //     admin's token, not the URL. It could also be split into
+    //     separate endpoints for details, hours and policy.
+    //   - every field name below:
+    //       name, email, phone, address,
+    //       operating_hours: [{ day_of_week, is_open, start_time, end_time }]
+    //         (day_of_week 0 = Monday ... 6 = Sunday, same convention
+    //          as the doctor availability endpoint),
+    //       min_notice_hours, max_advance_days,
+    //       free_cancellation_hours,
+    //       late_cancellation_refund: NONE | PARTIAL | FULL,
+    //       partial_refund_percent
+    //   - whether doctors can override clinic hours or rules with
+    //     their own availability. Ntsako's "question 5". This page
+    //     assumes the clinic settings are the outer limit.
+    //   - whether the refund options here are right. Payments go
+    //     through Paystack, so the real refund rules are for
+    //     Ntsako to confirm.
+    //   - whether the clinic's own contact details are editable by
+    //     the clinic admin, or only by the platform admin.
+    //
+    // TODO once login routing exists for CLINIC_ADMIN: redirect
+    // anyone else away from this page. That redirect is UX only;
+    // the backend must enforce access and clinic isolation.
+    // =========================================================
+
+    const DAY_NAMES_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const MOCK_SETTINGS = {
+        name: "Sandton Family Practice",
+        email: "reception@sandtonfp.example",
+        phone: "011 555 0100",
+        address: "12 Rivonia Road, Sandton",
+        operating_hours: [
+            { day_of_week: 0, is_open: true,  start_time: "08:00", end_time: "17:00" },
+            { day_of_week: 1, is_open: true,  start_time: "08:00", end_time: "17:00" },
+            { day_of_week: 2, is_open: true,  start_time: "08:00", end_time: "17:00" },
+            { day_of_week: 3, is_open: true,  start_time: "08:00", end_time: "17:00" },
+            { day_of_week: 4, is_open: true,  start_time: "08:00", end_time: "17:00" },
+            { day_of_week: 5, is_open: true,  start_time: "08:00", end_time: "13:00" },
+            { day_of_week: 6, is_open: false, start_time: "08:00", end_time: "13:00" }
+        ],
+        min_notice_hours: 2,
+        max_advance_days: 30,
+        free_cancellation_hours: 24,
+        late_cancellation_refund: "PARTIAL",
+        partial_refund_percent: 50
+    };
+
+    let savedSettings = null; // last version loaded or saved, used by Discard
+
+    // =========================================================
+    // LOAD
+    // =========================================================
+
+    async function loadSettings() {
+        // TODO: confirm with Ntsako: replace with:
+        //   GET /api/clinic/settings/
+
+        try {
+            // Simulating a network call with mock data for now.
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            savedSettings = JSON.parse(JSON.stringify(MOCK_SETTINGS));
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('loadingState').textContent = 'Could not load settings.';
+            return;
+        }
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('settingsForm').style.display = 'block';
+        fillForm(savedSettings);
+    }
+
+    // =========================================================
+    // FORM <-> DATA
+    // =========================================================
+
+    function fillForm(s) {
+        document.getElementById('clinicNameLabel').textContent = s.name;
+
+        document.getElementById('clinicName').value = s.name || '';
+        document.getElementById('clinicEmail').value = s.email || '';
+        document.getElementById('clinicPhone').value = s.phone || '';
+        document.getElementById('clinicAddress').value = s.address || '';
+
+        document.getElementById('minNoticeHours').value = s.min_notice_hours;
+        document.getElementById('maxAdvanceDays').value = s.max_advance_days;
+        document.getElementById('freeCancelHours').value = s.free_cancellation_hours;
+        document.getElementById('lateRefundType').value = s.late_cancellation_refund;
+        document.getElementById('partialRefundPercent').value = s.partial_refund_percent || '';
+
+        renderHours(s.operating_hours);
+        updatePartialVisibility();
+        setDirty(false);
+    }
+
+    function renderHours(hours) {
+        const list = document.getElementById('hoursList');
+
+        list.innerHTML = hours.map(h => `
+            <div class="hours-row" data-day="${h.day_of_week}">
+                <div class="form-check hours-day">
+                    <input class="form-check-input hours-open" type="checkbox" id="open${h.day_of_week}" ${h.is_open ? 'checked' : ''}>
+                    <label class="form-check-label" for="open${h.day_of_week}">${DAY_NAMES_LONG[h.day_of_week]}</label>
+                </div>
+                <input type="time" class="form-control hours-start" value="${h.start_time}" ${h.is_open ? '' : 'disabled'}>
+                <span class="hours-sep">to</span>
+                <input type="time" class="form-control hours-end" value="${h.end_time}" ${h.is_open ? '' : 'disabled'}>
+                <span class="hours-closed-label" style="${h.is_open ? 'display:none;' : ''}">Closed</span>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.hours-open').forEach(box => {
+            box.addEventListener('change', function () {
+                const row = this.closest('.hours-row');
+                row.querySelector('.hours-start').disabled = !this.checked;
+                row.querySelector('.hours-end').disabled = !this.checked;
+                row.querySelector('.hours-closed-label').style.display = this.checked ? 'none' : 'inline';
+            });
+        });
+    }
+
+    function readForm() {
+        const hours = [];
+        document.querySelectorAll('#hoursList .hours-row').forEach(row => {
+            hours.push({
+                day_of_week: parseInt(row.getAttribute('data-day'), 10),
+                is_open: row.querySelector('.hours-open').checked,
+                start_time: row.querySelector('.hours-start').value,
+                end_time: row.querySelector('.hours-end').value
+            });
+        });
+
+        const refundType = document.getElementById('lateRefundType').value;
+
+        return {
+            name: document.getElementById('clinicName').value.trim(),
+            email: document.getElementById('clinicEmail').value.trim(),
+            phone: document.getElementById('clinicPhone').value.trim(),
+            address: document.getElementById('clinicAddress').value.trim(),
+            operating_hours: hours,
+            min_notice_hours: parseInt(document.getElementById('minNoticeHours').value, 10),
+            max_advance_days: parseInt(document.getElementById('maxAdvanceDays').value, 10),
+            free_cancellation_hours: parseInt(document.getElementById('freeCancelHours').value, 10),
+            late_cancellation_refund: refundType,
+            partial_refund_percent: refundType === 'PARTIAL'
+                ? parseInt(document.getElementById('partialRefundPercent').value, 10)
+                : null
+        };
+    }
+
+    // Returns an error message, or '' if the settings are valid.
+    function validate(s) {
+        if (!s.name) return 'Clinic name is required.';
+        if (!s.email) return 'Email is required.';
+
+        for (const h of s.operating_hours) {
+            if (!h.is_open) continue;
+            if (!h.start_time || !h.end_time) {
+                return `Please set opening and closing times for ${DAY_NAMES_LONG[h.day_of_week]}.`;
+            }
+            if (h.end_time <= h.start_time) {
+                return `Closing time must be after opening time on ${DAY_NAMES_LONG[h.day_of_week]}.`;
+            }
+        }
+
+        if (!s.operating_hours.some(h => h.is_open)) {
+            return 'The clinic must be open at least one day a week.';
+        }
+
+        if (!Number.isInteger(s.min_notice_hours) || s.min_notice_hours < 0) {
+            return 'Minimum notice must be 0 or more hours.';
+        }
+        if (!Number.isInteger(s.max_advance_days) || s.max_advance_days < 1) {
+            return 'Maximum advance booking must be at least 1 day.';
+        }
+        if (!Number.isInteger(s.free_cancellation_hours) || s.free_cancellation_hours < 0) {
+            return 'Free cancellation window must be 0 or more hours.';
+        }
+        if (s.late_cancellation_refund === 'PARTIAL') {
+            if (!Number.isInteger(s.partial_refund_percent) ||
+                s.partial_refund_percent < 1 || s.partial_refund_percent > 99) {
+                return 'Partial refund must be a whole number between 1 and 99.';
+            }
+        }
+
+        return '';
+    }
+
+    // =========================================================
+    // UI STATE
+    // =========================================================
+
+    function updatePartialVisibility() {
+        const isPartial = document.getElementById('lateRefundType').value === 'PARTIAL';
+        document.getElementById('partialPercentGroup').style.display = isPartial ? 'block' : 'none';
+    }
+
+    function setDirty(isDirty) {
+        document.getElementById('dirtyLabel').style.display = isDirty ? 'inline' : 'none';
+    }
+
+    function clearMessages() {
+        document.getElementById('formError').style.display = 'none';
+        document.getElementById('formSuccess').style.display = 'none';
+    }
+
+    document.getElementById('lateRefundType').addEventListener('change', updatePartialVisibility);
+
+    // Any edit inside the form marks it as having unsaved changes.
+    document.getElementById('settingsForm').addEventListener('input', function () {
+        setDirty(true);
+        clearMessages();
+    });
+    document.getElementById('settingsForm').addEventListener('change', function () {
+        setDirty(true);
+        clearMessages();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', function () {
+        fillForm(savedSettings);
+        clearMessages();
+    });
+
+    // Warn before leaving with unsaved edits.
+    window.addEventListener('beforeunload', function (e) {
+        if (document.getElementById('dirtyLabel').style.display !== 'none') {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // =========================================================
+    // SAVE
+    // =========================================================
+
+    document.getElementById('settingsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        clearMessages();
+
+        const errorEl = document.getElementById('formError');
+        const successEl = document.getElementById('formSuccess');
+        const saveBtn = document.getElementById('saveBtn');
+
+        const newSettings = readForm();
+        const problem = validate(newSettings);
+
+        if (problem) {
+            errorEl.textContent = problem;
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        saveBtn.disabled = true;
+
+        // Only the network call lives inside the try. The UI updates
+        // happen after it, so a bug in rendering can never be
+        // reported to the user as a "network error".
+        try {
+            // TODO: confirm with Ntsako: replace with:
+            //   PUT /api/clinic/settings/   (body: newSettings)
+            // and only continue if response.ok. On a 400, show the
+            // field errors the backend returns.
+            await new Promise(resolve => setTimeout(resolve, 400));
+
+        } catch (error) {
+            console.error(error);
+            errorEl.textContent = 'Network error: could not save your settings.';
+            errorEl.style.display = 'block';
+            saveBtn.disabled = false;
+            return;
+        }
+
+        savedSettings = JSON.parse(JSON.stringify(newSettings));
+        document.getElementById('clinicNameLabel').textContent = savedSettings.name;
+        setDirty(false);
+        successEl.textContent = 'Settings saved.';
+        successEl.style.display = 'block';
+        saveBtn.disabled = false;
+    });
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    loadSettings();
+</script>
+</body>
+</html>
