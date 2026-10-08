@@ -172,6 +172,12 @@
     <p class="text-muted text-center mb-4">Add the days and times you're available for appointments this week.</p>
 
     <div class="mb-3">
+        <label class="form-label">Clinic</label>
+        <select id="doctorClinicSelect" class="form-control"><option value="">Loading clinics...</option></select>
+        <div class="form-text">Availability is set separately for each clinic you work at.</div>
+    </div>
+
+    <div class="mb-3">
         <label class="form-label">Day of the Week</label>
         <select id="slotDay" class="form-control">
             <option value="">Select a day</option>
@@ -299,6 +305,13 @@
             return;
         }
 
+        const clinicId = document.getElementById('doctorClinicSelect').value;
+        if (!clinicId) {
+            saveError.textContent = 'Please choose a clinic first.';
+            saveError.style.display = 'block';
+            return;
+        }
+
         try {
             let allSucceeded = true;
             let lastError = null;
@@ -311,6 +324,7 @@
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
+                        clinic: parseInt(clinicId, 10),
                         day_of_week: slot.day_of_week,
                         day_name: slot.day_name,
                         start_time: slot.start_time,
@@ -340,6 +354,42 @@
             saveError.style.display = 'block';
         }
     });
+
+    (async function loadDoctorClinics() {
+        const select = document.getElementById('doctorClinicSelect');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        let clinics = [];
+        try {
+            const r = await fetch(API_BASE_URL + '/api/clinics/my-memberships/', { headers: headers });
+            if (r.ok) {
+                const d = await r.json();
+                const list = d.memberships || d.results || d;
+                (Array.isArray(list) ? list : []).forEach(m => {
+                    if (String(m.role).toUpperCase() === 'DOCTOR' && m.is_active !== false &&
+                        !clinics.some(c => String(c.id) === String(m.clinic))) {
+                        clinics.push({ id: m.clinic, name: m.clinic_name });
+                    }
+                });
+            }
+            if (clinics.length === 0) {
+                const r2 = await fetch(API_BASE_URL + '/api/clinics/', { headers: headers });
+                if (r2.ok) {
+                    const d2 = await r2.json();
+                    const list2 = d2.clinics || d2.results || d2;
+                    clinics = (Array.isArray(list2) ? list2 : []).filter(c => c.is_active !== false)
+                        .map(c => ({ id: c.id, name: c.name }));
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        select.innerHTML = clinics.length === 0
+            ? '<option value="">No clinics found</option>'
+            : (clinics.length > 1 ? '<option value="">Select a clinic</option>' : '') +
+              clinics.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+    })();
 </script>
 </body>
 </html>
