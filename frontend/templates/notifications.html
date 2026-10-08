@@ -231,6 +231,21 @@
     const userRole = localStorage.getItem('userRole');
     let currentFilter = 'ALL';
 
+    // A clinic admin keeps the PATIENT global role, so the role alone can't tell
+    // them apart. The clinic pages remember the clinic being managed for this
+    // browser session, so that is used to pick the clinic sidebar here.
+    function isClinicAdminSession() {
+        try { return !!sessionStorage.getItem('adminClinicId'); } catch (e) { return false; }
+    }
+
+    // Titles and messages can contain text typed in by other users (names, reasons),
+    // so they are escaped before going into innerHTML.
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
     // CHANGED: sidebar links are now built dynamically based on the logged-in
     // user's role, since this page is shared across patients, doctors, and admins.
     // Falls back to the patient links if userRole isn't set (e.g. someone who
@@ -255,6 +270,16 @@
                 <a href="{% url 'admin_document_review' %}" class="sidebar-link">Document Review</a>
                 <a href="{% url 'notifications' %}" class="sidebar-link active">Notifications</a>
             `;
+        } else if (isClinicAdminSession()) {
+            sidebarLinks.innerHTML = `
+                <a href="{% url 'clinic_dashboard' %}" class="sidebar-link">Dashboard</a>
+                <a href="{% url 'clinic_doctors_staff' %}" class="sidebar-link">Doctors &amp; Staff</a>
+                <a href="{% url 'clinic_calendar' %}" class="sidebar-link">Calendar</a>
+                <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments</a>
+                <a href="{% url 'clinic_reports' %}" class="sidebar-link">Reports</a>
+                <a href="{% url 'clinic_settings' %}" class="sidebar-link">Clinic Settings</a>
+                <a href="{% url 'notifications' %}" class="sidebar-link active">Notifications</a>
+            `;
         } else {
             // PATIENT (default/fallback)
             sidebarLinks.innerHTML = `
@@ -277,6 +302,8 @@
     document.getElementById('logoutBtn').addEventListener('click', function () {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userRole');
+        try { sessionStorage.removeItem('adminClinicId'); } catch (e) { /* ignore */ }
         window.location.href = "{% url 'home' %}";
     });
 
@@ -290,14 +317,14 @@
         const list = document.getElementById('notificationsList');
 
         list.innerHTML = notifications.map(n => `
-        <div class="notification-row ${n.is_read ? '' : 'unread'}" data-id="${n.id}">
+        <div class="notification-row ${n.is_read ? '' : 'unread'}" data-id="${escapeHtml(n.id)}">
             <div class="notification-title">
-                ${n.is_read ? '' : '<span class="unread-dot"></span>'}${n.title}
+                ${n.is_read ? '' : '<span class="unread-dot"></span>'}${escapeHtml(n.title)}
             </div>
-            <div class="notification-message">${n.message}</div>
+            <div class="notification-message">${escapeHtml(n.message)}</div>
             <div class="d-flex justify-content-between align-items-center">
                 <span class="notification-meta">${formatDate(n.created_at)}</span>
-                ${!n.is_read ? `<button class="btn btn-teal btn-sm mark-read-btn" data-id="${n.id}">Mark as read</button>` : ''}
+                ${!n.is_read ? `<button class="btn btn-teal btn-sm mark-read-btn" data-id="${escapeHtml(n.id)}">Mark as read</button>` : ''}
             </div>
         </div>
         `).join('');

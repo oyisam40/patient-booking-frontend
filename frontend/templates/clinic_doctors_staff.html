@@ -256,7 +256,6 @@
             padding: 30px 0;
         }
     </style>
-    <script src="{% static 'js/guard.js' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
     <script src="{% static 'js/clinic_context.js' %}"></script>
 </head>
@@ -328,6 +327,17 @@
         </div>
     </div>
 
+    <div class="modal-backdrop-custom" id="dialogBackdrop" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+        <div class="add-modal" style="max-width: 420px;">
+            <h5 class="mb-2" id="dialogTitle"></h5>
+            <p class="mb-4" id="dialogMessage" style="color:#444;"></p>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary w-100" id="dialogCancel">Cancel</button>
+                <button type="button" class="btn w-100" id="dialogConfirm">OK</button>
+            </div>
+        </div>
+    </div>
+
 <script>
     const token = localStorage.getItem('accessToken');
 
@@ -352,6 +362,41 @@
     let activeTab = 'doctors';
     let currentClinicId = null;
     let members = [];
+
+    // In-page dialog that replaces the browser's confirm() and alert().
+    // showDialog({title, message, confirmLabel, danger, showCancel}) -> Promise<boolean>
+    function showDialog(opts) {
+        return new Promise(resolve => {
+            const backdrop = document.getElementById('dialogBackdrop');
+            const confirmBtn = document.getElementById('dialogConfirm');
+            const cancelBtn = document.getElementById('dialogCancel');
+            document.getElementById('dialogTitle').textContent = opts.title || '';
+            document.getElementById('dialogMessage').textContent = opts.message || '';
+            confirmBtn.textContent = opts.confirmLabel || 'OK';
+            confirmBtn.className = 'btn w-100 ' + (opts.danger ? 'btn-danger' : 'btn-teal');
+            cancelBtn.style.display = opts.showCancel === false ? 'none' : '';
+            backdrop.classList.add('open');
+            confirmBtn.focus();
+
+            function finish(result) {
+                backdrop.classList.remove('open');
+                confirmBtn.removeEventListener('click', onConfirm);
+                cancelBtn.removeEventListener('click', onCancel);
+                backdrop.removeEventListener('click', onBackdrop);
+                document.removeEventListener('keydown', onKey);
+                resolve(result);
+            }
+            function onConfirm() { finish(true); }
+            function onCancel() { finish(false); }
+            function onBackdrop(e) { if (e.target === backdrop) finish(false); }
+            function onKey(e) { if (e.key === 'Escape') finish(false); }
+
+            confirmBtn.addEventListener('click', onConfirm);
+            cancelBtn.addEventListener('click', onCancel);
+            backdrop.addEventListener('click', onBackdrop);
+            document.addEventListener('keydown', onKey);
+        });
+    }
 
     function escapeHtml(value) {
         return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
@@ -537,11 +582,16 @@
         if (!member) return;
 
         const deactivating = member.is_active !== false;
-        const message = deactivating
-            ? `Deactivate ${member.user_name}? They will no longer be available in this clinic.`
-            : `Reactivate ${member.user_name}?`;
 
-        if (!confirm(message)) return;
+        const ok = await showDialog({
+            title: deactivating ? 'Deactivate member?' : 'Reactivate member?',
+            message: deactivating
+                ? `${member.user_name} will no longer be available in this clinic.`
+                : `${member.user_name} will be active in this clinic again.`,
+            confirmLabel: deactivating ? 'Deactivate' : 'Reactivate',
+            danger: deactivating
+        });
+        if (!ok) return;
 
         const clinicId = currentClinicId;
         button.disabled = true;
@@ -553,7 +603,7 @@
         } catch (error) {
             console.error(error);
             button.disabled = false;
-            alert('Could not reach the server. Please try again.');
+            await showDialog({ title: 'Connection problem', message: 'Could not reach the server. Please try again.', showCancel: false });
             return;
         }
 
@@ -561,7 +611,7 @@
 
         if (!result.ok) {
             button.disabled = false;
-            alert(describeError(result.status, result.data));
+            await showDialog({ title: 'Could not update', message: describeError(result.status, result.data), showCancel: false });
             return;
         }
 
