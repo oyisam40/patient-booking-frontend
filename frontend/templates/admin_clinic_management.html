@@ -168,6 +168,16 @@
             color: #721c24;
         }
 
+        .clinic-status-badge.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .clinic-status-badge.rejected {
+            background-color: #e2e3e5;
+            color: #41464b;
+        }
+
         .btn-teal {
             background-color: #1B9AAA;
             border-color: #1B9AAA;
@@ -183,6 +193,10 @@
             border-color: #8fc7ce;
         }
 
+        .review-section { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #1B9AAA; margin: 16px 0 8px; }
+        .review-grid { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; font-size: 14px; }
+        .review-label { color: #6c757d; }
+        .review-doc { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
         .modal-backdrop-custom {
             display: none;
             position: fixed;
@@ -237,7 +251,9 @@
             padding: 30px 0;
         }
     </style>
-    <script src="{% static 'js/guard.js' %}" data-allow="ADMIN"></script>
+    <script src="{% static 'js/branding.js' %}"
+            data-logo="{% static 'images/Doconnect.jpg' %}"
+            data-bg="{% static 'images/alterfines-medicine-2361046_1920.jpg' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
@@ -270,6 +286,11 @@
             </div>
 
             <div class="alert alert-success" id="pageNotice" style="display:none;"></div>
+
+            <h2 class="h5 mt-2 mb-2">Applications awaiting review <span class="text-muted" id="applicationCount"></span></h2>
+            <div id="applicationList" class="mb-4"><div class="text-muted small">Loading applications...</div></div>
+
+            <h2 class="h5 mb-2">Clinics</h2>
             <div class="loading-state" id="loadingState">Loading clinics...</div>
             <div class="empty-state" id="emptyState" style="display:none;">No clinics registered yet.</div>
             <div id="clinicList"></div>
@@ -335,6 +356,36 @@
             </div>
         </div>
     </div>
+
+    <div class="modal-backdrop-custom" id="reviewModalBackdrop">
+        <div class="onboard-modal" style="max-width: 680px;">
+            <h5 class="mb-1" id="reviewTitle">Clinic application</h5>
+            <p class="text-muted mb-3" style="font-size: 13px;" id="reviewSub"></p>
+            <div id="reviewLoading" class="text-muted small">Loading application...</div>
+            <div id="reviewError" class="text-danger mb-3" style="display:none; white-space: pre-line;"></div>
+            <div id="reviewBody" style="display:none;">
+                <div class="review-section">Clinic details</div>
+                <div id="reviewDetails" class="review-grid"></div>
+                <div class="review-section">Documents</div>
+                <div id="reviewDocs"></div>
+                <div class="review-section">Banking details</div>
+                <div id="reviewBank" class="review-grid"></div>
+                <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" id="bankProofBtn">Download bank proof</button></div>
+
+                <div class="mt-3" id="rejectWrap" style="display:none;">
+                    <label class="form-label" for="rejectNotes">Reason for rejection (sent to the applicant)</label>
+                    <textarea id="rejectNotes" class="form-control" rows="3" maxlength="500"></textarea>
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+                <button type="button" class="btn btn-outline-secondary flex-fill" id="reviewClose">Close</button>
+                <button type="button" class="btn btn-outline-danger flex-fill" id="rejectBtn" style="display:none;">Reject</button>
+                <button type="button" class="btn btn-outline-danger flex-fill" id="rejectConfirmBtn" style="display:none;">Confirm rejection</button>
+                <button type="button" class="btn btn-teal flex-fill" id="approveBtn" style="display:none;">Approve</button>
+            </div>
+        </div>
+    </div>
+
 
 <script>
     const token = localStorage.getItem('accessToken');
@@ -476,7 +527,18 @@
         emptyState.style.display = 'none';
 
         container.innerHTML = clinics.map(clinic => {
-            const isActive = clinic.is_active !== false;
+            const status = clinic.status || (clinic.is_active !== false ? 'ACTIVE' : 'SUSPENDED');
+            const badge = {
+                ACTIVE: ['active', 'Active'],
+                PENDING_DOCUMENTS: ['pending', 'Awaiting documents'],
+                PENDING_APPROVAL: ['pending', 'Awaiting approval'],
+                PENDING_VERIFICATION: ['pending', 'Email not verified'],
+                REJECTED: ['rejected', 'Rejected'],
+                SUSPENDED: ['inactive', 'Suspended']
+            }[status] || ['inactive', status];
+            const actions = (status === 'ACTIVE' || status === 'SUSPENDED')
+                ? `<button type="button" class="btn btn-sm btn-outline-secondary assign-btn" data-id="${escapeHtml(clinic.id)}">Assign Admin</button>`
+                : '';
             const contact = [clinic.email, clinic.phone_number].filter(Boolean).map(escapeHtml).join(' &middot; ');
 
             return `
@@ -486,10 +548,11 @@
                     <div class="clinic-meta">${escapeHtml(clinic.registration_number || '')}</div>
                     <div class="clinic-meta">${contact}</div>
                     ${clinic.address ? `<div class="clinic-meta">${escapeHtml(clinic.address)}</div>` : ''}
+                    ${rejectNote}
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="clinic-status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary assign-btn" data-id="${escapeHtml(clinic.id)}">Assign Admin</button>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="clinic-status-badge ${badge[0]}">${escapeHtml(badge[1])}</span>
+                    ${actions}
                 </div>
             </div>
             `;
@@ -638,10 +701,252 @@
     });
 
     // =========================================================
+    // CLINIC APPLICATIONS (platform admin review)
+    //
+    //   GET  /api/clinics/applications/review/                 list (PENDING by default)
+    //   GET  /api/clinics/applications/{id}/review/            details, documents, bank details
+    //   GET  /api/clinics/applications/documents/{docId}/download/
+    //   GET  /api/clinics/applications/{id}/bank-proof/download/   (404 if none uploaded)
+    //   POST /api/clinics/applications/{id}/approve/
+    //   POST /api/clinics/applications/{id}/reject/            { review_notes } (required)
+    //
+    // List response: { count, applications: [...] }. Detail response has
+    // applicant_name/email/phone_number, documents [{id, document_type,
+    // file_url, uploaded_at}] and bank_account {account_holder_name, ...}.
+    // =========================================================
+
+    let applications = [];
+    let reviewId = null;
+    let reviewBusy = false;
+
+    function pick(obj, keys) {
+        for (let i = 0; i < keys.length; i++) {
+            if (obj && obj[keys[i]] != null && obj[keys[i]] !== '') return obj[keys[i]];
+        }
+        return '';
+    }
+
+    async function loadApplications() {
+        const box = document.getElementById('applicationList');
+        let list;
+        try {
+            const response = await fetch(API_BASE_URL + '/api/clinics/applications/review/', { headers: authHeaders() });
+            const data = await readJson(response);
+            if (!response.ok) {
+                box.innerHTML = `<div class="text-danger small" style="white-space: pre-line;">${escapeHtml(describeError(data, response.status))}</div>`;
+                return;
+            }
+            list = (data && (data.applications || data.results)) || data;
+        } catch (error) {
+            console.error(error);
+            box.innerHTML = '<div class="text-danger small">Network error: could not load applications.</div>';
+            return;
+        }
+        applications = Array.isArray(list) ? list : [];
+        renderApplications();
+    }
+
+    function renderApplications() {
+        const box = document.getElementById('applicationList');
+        document.getElementById('applicationCount').textContent = applications.length ? `(${applications.length})` : '';
+        if (applications.length === 0) {
+            box.innerHTML = '<div class="text-muted small">No applications waiting for review.</div>';
+            return;
+        }
+        box.innerHTML = applications.map(app => {
+            const name = pick(app, ['clinic_name', 'name']);
+            const contact = [app.email, app.phone_number].filter(Boolean).map(escapeHtml).join(' &middot; ');
+            return `
+            <div class="clinic-row">
+                <div>
+                    <div class="clinic-name">${escapeHtml(name)}</div>
+                    <div class="clinic-meta">${escapeHtml(app.registration_number || '')}</div>
+                    <div class="clinic-meta">${contact}</div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="clinic-status-badge pending">${escapeHtml(app.status || 'PENDING')}</span>
+                    <button type="button" class="btn btn-sm btn-teal review-btn" data-id="${escapeHtml(app.id)}">Review</button>
+                </div>
+            </div>`;
+        }).join('');
+        box.querySelectorAll('.review-btn').forEach(btn => {
+            btn.addEventListener('click', () => openReview(btn.getAttribute('data-id')));
+        });
+    }
+
+    function detailRows(pairs) {
+        return pairs.filter(p => p[1] !== '' && p[1] != null).map(p =>
+            `<div class="review-label">${escapeHtml(p[0])}</div><div>${escapeHtml(p[1])}</div>`).join('')
+            || '<div class="text-muted small" style="grid-column: 1 / -1;">Nothing returned.</div>';
+    }
+
+    function setReviewError(text) {
+        const box = document.getElementById('reviewError');
+        box.textContent = text || '';
+        box.style.display = text ? 'block' : 'none';
+    }
+
+    function setReviewBusy(busy) {
+        reviewBusy = busy;
+        ['approveBtn', 'rejectBtn', 'rejectConfirmBtn'].forEach(id => { document.getElementById(id).disabled = busy; });
+    }
+
+    async function openReview(id) {
+        reviewId = id;
+        setReviewError('');
+        setReviewBusy(false);
+        document.getElementById('reviewBody').style.display = 'none';
+        document.getElementById('reviewLoading').style.display = 'block';
+        ['approveBtn', 'rejectBtn', 'rejectConfirmBtn'].forEach(b => { document.getElementById(b).style.display = 'none'; });
+        document.getElementById('rejectWrap').style.display = 'none';
+        document.getElementById('rejectNotes').value = '';
+        document.getElementById('reviewModalBackdrop').classList.add('open');
+
+        let data, status;
+        try {
+            const response = await fetch(API_BASE_URL + '/api/clinics/applications/' + encodeURIComponent(id) + '/review/', { headers: authHeaders() });
+            status = response.status;
+            data = await readJson(response);
+            if (!response.ok) throw new Error('bad');
+        } catch (e) {
+            document.getElementById('reviewLoading').style.display = 'none';
+            setReviewError(data || status ? describeError(data, status) : 'Network error: could not load this application.');
+            return;
+        }
+        if (String(reviewId) !== String(id)) return;
+        // The detail response may be wrapped: { application: { ... } }
+        renderReview((data && data.application) || data);
+    }
+
+    function renderReview(app) {
+        const name = pick(app, ['clinic_name', 'name']);
+        document.getElementById('reviewTitle').textContent = name || 'Clinic application';
+        document.getElementById('reviewSub').textContent = 'Application #' + reviewId + (app.status ? ' · ' + app.status : '');
+
+        document.getElementById('reviewDetails').innerHTML = detailRows([
+            ['Registration no.', app.registration_number],
+            ['Clinic email', app.email],
+            ['Clinic phone', app.phone_number],
+            ['Address', app.address],
+            ['Applicant', app.applicant_name],
+            ['Applicant email', app.applicant_email],
+            ['Applicant phone', app.applicant_phone_number]
+        ]);
+
+        const bank = app.bank_account || app.bank_details || app.bank || {};
+        document.getElementById('reviewBank').innerHTML = detailRows([
+            ['Account holder', pick(bank, ['account_holder_name', 'account_holder'])],
+            ['Bank', bank.bank_name],
+            ['Account type', bank.account_type],
+            ['Account no.', bank.account_number],
+            ['Branch code', bank.branch_code],
+            ['Verification', bank.verification_status]
+        ]);
+
+        const docs = Array.isArray(app.documents) ? app.documents : [];
+        document.getElementById('reviewDocs').innerHTML = docs.length
+            ? docs.map(d => `
+                <div class="review-doc">
+                    <div>
+                        <div style="font-weight:600;">${escapeHtml(String(pick(d, ['document_type', 'type']) || 'Document').replace(/_/g, ' ').toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }))}</div>
+                        <div class="text-muted small">${escapeHtml(pick(d, ['file_name', 'filename', 'name']) || (d.uploaded_at ? 'Uploaded ' + new Date(d.uploaded_at).toLocaleString() : ''))}</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary doc-download" data-doc="${escapeHtml(d.id)}">Open</button>
+                </div>`).join('')
+            : '<div class="text-muted small">No documents returned.</div>';
+
+        document.getElementById('reviewLoading').style.display = 'none';
+        document.getElementById('reviewBody').style.display = 'block';
+
+        const pending = !app.status || String(app.status).toUpperCase() === 'PENDING';
+        document.getElementById('approveBtn').style.display = pending ? 'block' : 'none';
+        document.getElementById('rejectBtn').style.display = pending ? 'block' : 'none';
+    }
+
+    // Files need the Authorization header, so they are fetched as a blob
+    // and opened in a new tab instead of linked directly.
+    async function openFile(url, fallbackMessage) {
+        setReviewError('');
+        let response;
+        try {
+            response = await fetch(API_BASE_URL + url, { headers: { 'Authorization': `Bearer ${token}` } });
+        } catch (e) {
+            setReviewError('Network error: could not download the file.');
+            return;
+        }
+        if (response.status === 404) { setReviewError(fallbackMessage || 'No file was uploaded.'); return; }
+        if (!response.ok) { setReviewError(describeError(await readJson(response), response.status)); return; }
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const win = window.open(objectUrl, '_blank');
+        if (!win) setReviewError('The browser blocked the new tab. Allow pop-ups for this site and try again.');
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+    }
+
+    document.getElementById('reviewDocs').addEventListener('click', function (e) {
+        const btn = e.target.closest('.doc-download');
+        if (btn) openFile('/api/clinics/applications/documents/' + encodeURIComponent(btn.getAttribute('data-doc')) + '/download/');
+    });
+    document.getElementById('bankProofBtn').addEventListener('click', function () {
+        openFile('/api/clinics/applications/' + encodeURIComponent(reviewId) + '/bank-proof/download/', 'No bank proof was uploaded for this application.');
+    });
+
+    function closeReview() {
+        reviewId = null;
+        document.getElementById('reviewModalBackdrop').classList.remove('open');
+    }
+    document.getElementById('reviewClose').addEventListener('click', closeReview);
+
+    async function decide(kind) {
+        if (reviewBusy || !reviewId) return;
+        setReviewError('');
+        const id = reviewId;
+        let options = { method: 'POST', headers: authHeaders() };
+        if (kind === 'reject') {
+            const notes = document.getElementById('rejectNotes').value.trim();
+            if (!notes) { setReviewError('Please give a reason for rejecting this application.'); return; }
+            options.body = JSON.stringify({ review_notes: notes });
+        } else {
+            options.body = JSON.stringify({});
+        }
+        setReviewBusy(true);
+        let response, data;
+        try {
+            response = await fetch(API_BASE_URL + '/api/clinics/applications/' + encodeURIComponent(id) + '/' + kind + '/', options);
+            data = await readJson(response);
+        } catch (e) {
+            setReviewError('Network error: the decision was not saved.');
+            setReviewBusy(false);
+            return;
+        }
+        setReviewBusy(false);
+        if (!response.ok) { setReviewError(describeError(data, response.status)); return; }
+
+        const app = applications.find(a => String(a.id) === String(id));
+        const name = app ? pick(app, ['clinic_name', 'name']) : 'The application';
+        closeReview();
+        showNotice(kind === 'approve' ? `${name} is approved. The applicant is now its clinic admin.` : `${name} was rejected.`);
+        loadApplications();
+        loadClinics();
+    }
+
+    document.getElementById('approveBtn').addEventListener('click', () => decide('approve'));
+    document.getElementById('rejectBtn').addEventListener('click', function () {
+        document.getElementById('rejectWrap').style.display = 'block';
+        document.getElementById('rejectBtn').style.display = 'none';
+        document.getElementById('approveBtn').style.display = 'none';
+        document.getElementById('rejectConfirmBtn').style.display = 'block';
+        document.getElementById('rejectNotes').focus();
+    });
+    document.getElementById('rejectConfirmBtn').addEventListener('click', () => decide('reject'));
+
+
+    // =========================================================
     // INITIAL LOAD
     // =========================================================
 
     loadClinics();
+    loadApplications();
 </script>
 </body>
 </html>

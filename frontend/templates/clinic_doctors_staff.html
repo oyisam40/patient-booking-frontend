@@ -256,6 +256,9 @@
             padding: 30px 0;
         }
     </style>
+    <script src="{% static 'js/branding.js' %}"
+            data-logo="{% static 'images/Doconnect.jpg' %}"
+            data-bg="{% static 'images/alterfines-medicine-2361046_1920.jpg' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
     <script src="{% static 'js/clinic_context.js' %}"></script>
 </head>
@@ -430,7 +433,7 @@
 
     function describeError(status, data) {
         if (status === 401) return 'You are not logged in. Please log in again.';
-        if (status === 403) return "You don't have permission to manage this clinic's members.";
+        if (status === 403) return (data && data.detail) ? String(data.detail) : "You don't have permission to manage this clinic's members.";
         return flattenErrors(data) || `Request failed (HTTP ${status}).`;
     }
 
@@ -549,11 +552,11 @@
                 </div>
                 <div class="member-actions">
                     <span class="member-status-badge ${status.toLowerCase()}">${status}</span>
-                    <button type="button"
+                    ${isDoctor ? `<button type="button"
                             class="btn btn-sm ${isActive ? 'btn-outline-danger' : 'btn-outline-secondary'} toggle-status-btn"
                             data-id="${escapeHtml(member.id)}">
                         ${isActive ? 'Deactivate' : 'Reactivate'}
-                    </button>
+                    </button>` : ''}
                 </div>
             </div>
         `;
@@ -661,7 +664,7 @@
 
         let result;
         try {
-            result = await api('POST', `/api/clinics/${clinicId}/members/`, { user: userId, role: role });
+            result = await api('POST', `/api/clinics/${clinicId}/members/`, { user_id: userId, user: userId, role: role });
         } catch (error) {
             console.error(error);
             errorBox.textContent = 'Network error: could not add this person.';

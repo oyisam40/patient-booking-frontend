@@ -1,0 +1,400 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register your clinic - DOCONNECT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bg {
+            animation: slide 3s ease-in-out infinite alternate;
+            background-image: linear-gradient(-60deg, #1B9AAA 50%, #4FD1C5 50%);
+            bottom: 0; left: -50%; opacity: .5; position: fixed; right: -50%; top: 0; z-index: -1;
+        }
+        .bg2 { animation-direction: alternate-reverse; animation-duration: 4s; }
+        .bg3 { animation-duration: 5s; }
+        @keyframes slide { 0% { transform: translateX(-25%) } 100% { transform: translateX(25%) } }
+        body { min-height: 100vh; }
+
+        .btn-teal { background-color: #1B9AAA; border-color: #1B9AAA; color: white; }
+        .btn-teal:hover:not(:disabled) { background-color: #16808f; border-color: #16808f; color: white; }
+        .btn-teal:disabled { background-color: #1B9AAA; border-color: #1B9AAA; color: white; opacity: .6; }
+        .teal-link { color: #1B9AAA; text-decoration: none; }
+        .teal-link:hover { color: #16808f; text-decoration: underline; }
+
+        .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #1B9AAA; }
+        .section-title { font-size: 14px; font-weight: 700; color: #1B9AAA; text-transform: uppercase; letter-spacing: .03em; margin: 8px 0 12px; }
+        .login-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-bottom: 16px; }
+        .field-error { color: #b02a37; font-size: 13px; margin-top: 4px; }
+        .otp-input { letter-spacing: .5em; font-size: 1.6rem; text-align: center; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+    </style>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+<body>
+    <div class="bg"></div><div class="bg bg2"></div><div class="bg bg3"></div>
+
+    <div class="d-flex justify-content-center align-items-start" style="min-height: 100vh; padding: 2rem 0;">
+        <div class="card" style="max-width: 620px; width: 100%; margin: 1rem; box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.25);">
+            <div class="card-body p-4">
+                <div class="text-center">
+                    <img class="mb-3" src="{% static 'images/Doconnect.jpg' %}" height="100" alt="DoConnect Logo">
+                </div>
+
+                <!-- PANEL 1: clinic details -->
+                <div class="panel active" id="panelForm">
+                    <div class="eyebrow">Step 1 of 3</div>
+                    <h1 class="h3 mb-3 font-weight-normal">Register your clinic</h1>
+
+                    <form id="registerForm" novalidate>
+                        <div id="formError" class="login-error" style="display:none;"></div>
+
+                        <div class="section-title">Your details (the person applying)</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="firstName">First name</label>
+                                <input class="form-control" id="firstName" data-field="first_name" autocomplete="given-name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="lastName">Last name</label>
+                                <input class="form-control" id="lastName" data-field="last_name" autocomplete="family-name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="username">Username</label>
+                                <input class="form-control" id="username" data-field="username" autocomplete="username" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="applicantPhone">Your phone</label>
+                                <input type="tel" class="form-control" id="applicantPhone" data-field="phone_number" autocomplete="tel" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="applicantEmail">Your email address</label>
+                                <input type="email" class="form-control" id="applicantEmail" data-field="email" autocomplete="email" placeholder="you@example.com" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="password">Password</label>
+                                <input type="password" class="form-control" id="password" data-field="password" autocomplete="new-password" minlength="8" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="confirmPassword">Confirm password</label>
+                                <input type="password" class="form-control" id="confirmPassword" data-field="confirm_password" autocomplete="new-password" required>
+                            </div>
+                        </div>
+
+                        <div class="section-title">Clinic details</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="clinicName">Clinic name</label>
+                                <input class="form-control" id="clinicName" data-field="clinic_name" maxlength="120" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="clinicReg">Registration number</label>
+                                <input class="form-control" id="clinicReg" data-field="registration_number" maxlength="60" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="clinicEmail">Clinic email</label>
+                                <input type="email" class="form-control" id="clinicEmail" data-field="clinic_email" placeholder="contact@clinic.com" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="clinicPhone">Clinic phone</label>
+                                <input type="tel" class="form-control" id="clinicPhone" data-field="clinic_phone_number"  required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="clinicAddress">Address</label>
+                                <input class="form-control" id="clinicAddress" data-field="address" placeholder="123 Long St, Cape Town" required>
+                            </div>
+                        </div>
+
+                        <div class="section-title">Banking details</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="accountHolder">Account holder</label>
+                                <input class="form-control" id="accountHolder" data-field="account_holder_name"  required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="bankName">Bank name</label>
+                                <input class="form-control" id="bankName" data-field="bank_name" placeholder="e.g. Nedbank" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="accountType">Account type</label>
+                                <select class="form-select" id="accountType" data-field="account_type" required>
+                                    <option value="">Select account type</option>
+                                    <option value="CHEQUE">Cheque</option>
+                                    <option value="SAVINGS">Savings</option>
+                                    <option value="TRANSMISSION">Transmission</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="branchCode">Branch code</label>
+                                <input class="form-control" id="branchCode" data-field="branch_code" inputmode="numeric" maxlength="12" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="accountNumber">Account number</label>
+                                <input class="form-control" id="accountNumber" data-field="account_number" inputmode="numeric" autocomplete="off" maxlength="20" required>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-teal d-block w-100" id="registerBtn">Continue</button>
+                        </div>
+                        <p class="text-center small text-muted mt-3 mb-0">We'll email you a 6-digit code to confirm your address.<br>Already applied? <a href="/" class="teal-link">Sign in</a></p>
+                    </form>
+                </div>
+
+                <!-- PANEL 2: email OTP -->
+                <div class="panel" id="panelOtp">
+                    <div class="eyebrow">Step 2 of 3</div>
+                    <h1 class="h3 mb-3 font-weight-normal">Check your email</h1>
+                    <form id="otpForm" novalidate>
+                        <div id="otpError" class="login-error" style="display:none;"></div>
+                        <p>We sent a 6-digit code to <strong id="otpEmail"></strong>.</p>
+                        <input class="form-control otp-input" id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-teal d-block w-100" id="verifyBtn">Verify email</button>
+                        </div>
+                        <div class="text-center small mt-3">
+                            <span id="resendWait" class="text-muted"></span>
+                            <a href="#" id="resendLink" class="teal-link" style="display:none;">Send a new code</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Backend: Ntsako's clinic application API.
+        //   POST /api/clinics/applications/   multipart (no JWT needed): creates the applicant's user account AND the application:
+        //        username, first_name, last_name, email, phone_number, password, confirm_password,
+        //        clinic_name, registration_number, clinic_email, clinic_phone_number, address,
+        //        account_holder_name, bank_name, account_number, account_type (CHEQUE|SAVINGS|TRANSMISSION), branch_code
+        //   POST /api/auth/verify-otp/        JSON: { verification_method: 'EMAIL', verification_identity: <applicant email>, otp }
+        //   POST /api/auth/resend-otp/        JSON: { email }
+        //   POST /api/auth/login/             used after OTP when verify-otp returns no token
+        var RESEND_SECONDS = 60;
+
+        var state = { applicationId: null, email: '', username: '', password: '', resendTimer: null, busy: false };
+        var $ = function (id) { return document.getElementById(id); };
+
+        function readStored(storage, key) {
+            try { return storage.getItem(key); } catch (e) { return null; }
+        }
+
+        function showPanel(id) {
+            document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('active', p.id === id); });
+            window.scrollTo(0, 0);
+        }
+
+        function showError(boxId, msg) { var b = $(boxId); b.textContent = msg; b.style.display = 'block'; }
+        function clearErrors() {
+            ['formError', 'otpError'].forEach(function (id) { $(id).style.display = 'none'; });
+            document.querySelectorAll('.field-error[data-for]').forEach(function (el) { el.remove(); });
+            document.querySelectorAll('.is-invalid').forEach(function (el) { el.classList.remove('is-invalid'); });
+        }
+
+        // DRF error bodies: { field: ["msg"] } or { detail: "..." } or { non_field_errors: [...] }.
+        function flattenErrors(data) {
+            var out = { fields: {}, general: [] };
+            if (data === null || data === undefined) return out;
+            if (typeof data === 'string') { out.general.push(data); return out; }
+            if (Array.isArray(data)) { out.general.push(data.map(String).join(' ')); return out; }
+            Object.keys(data).forEach(function (k) {
+                var v = data[k];
+                var text = Array.isArray(v) ? v.map(String).join(' ') : (typeof v === 'object' && v ? JSON.stringify(v) : String(v));
+                if (k === 'detail' || k === 'message' || k === 'non_field_errors' || k === 'error') out.general.push(text);
+                else out.fields[k] = text;
+            });
+            return out;
+        }
+
+        function describeError(status, data) {
+            if (status === 401) return 'Your session has expired or you are not signed in. Please sign in and try again.';
+            if (status === 429) return 'Too many attempts. Please wait a moment and try again.';
+            if (status >= 500) return 'Something went wrong on our side. Please try again shortly.';
+            var f = flattenErrors(data);
+            var parts = f.general.concat(Object.keys(f.fields).map(function (k) { return f.fields[k]; }));
+            return parts.length ? parts.join(' ') : 'Please check your details and try again.';
+        }
+
+        function markInvalid(input, message) {
+            input.classList.add('is-invalid');
+            if (!message) return;
+            var div = document.createElement('div');
+            div.className = 'field-error';
+            div.setAttribute('data-for', input.getAttribute('data-field') || input.id);
+            div.textContent = message;
+            input.insertAdjacentElement('afterend', div);
+        }
+
+        function validateForm() {
+            clearErrors();
+            var first = null;
+            document.querySelectorAll('#registerForm [required]').forEach(function (el) {
+                if (!el.value.trim()) { markInvalid(el); if (!first) first = el; }
+            });
+            if (first) { showError('formError', 'Please fill in all the fields.'); first.focus(); return false; }
+            var bad = ['applicantEmail', 'clinicEmail'].filter(function (id) { return !$(id).checkValidity(); })[0];
+            if (bad) { markInvalid($(bad), 'Enter a valid email address.'); $(bad).focus(); return false; }
+            if ($('password').value.length < 8) { markInvalid($('password'), 'Use at least 8 characters.'); $('password').focus(); return false; }
+            if ($('password').value !== $('confirmPassword').value) { markInvalid($('confirmPassword'), 'Passwords do not match.'); $('confirmPassword').focus(); return false; }
+            return true;
+        }
+
+        async function sendJson(path, body) {
+            var response, data = null;
+            try {
+                response = await fetch(API_BASE_URL + path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+            } catch (e) {
+                return { networkError: true };
+            }
+            try { data = await response.json(); } catch (e) { data = null; }
+            return { ok: response.ok, status: response.status, data: data };
+        }
+
+        // ---- step 1: create the application --------------------------------
+        $('registerForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (state.busy || !validateForm()) return;
+            state.busy = true;
+            var btn = $('registerBtn');
+            btn.disabled = true; btn.textContent = 'Please wait...';
+
+            var form = new FormData();
+            document.querySelectorAll('#registerForm [data-field]').forEach(function (el) {
+                var v = el.value.trim();
+                if (el.type === 'password') v = el.value;
+                form.append(el.getAttribute('data-field'), v);
+            });
+            state.username = $('username').value.trim();
+            state.password = $('password').value;
+
+            var headers = {};
+
+            var response, data = null;
+            try {
+                response = await fetch(API_BASE_URL + '/api/clinics/applications/', { method: 'POST', headers: headers, body: form });
+                try { data = await response.json(); } catch (err) { data = null; }
+            } catch (err) {
+                state.busy = false;
+                btn.disabled = false; btn.textContent = 'Continue';
+                showError('formError', 'Network error: could not reach the server.');
+                return;
+            }
+            state.busy = false;
+            btn.disabled = false; btn.textContent = 'Continue';
+
+            if (!response.ok) {
+                clearErrors();
+                var f = flattenErrors(data);
+                var firstInput = null;
+                Object.keys(f.fields).forEach(function (k) {
+                    var input = document.querySelector('[data-field="' + k + '"]');
+                    if (input) { markInvalid(input, f.fields[k]); if (!firstInput) firstInput = input; }
+                    else f.general.push(f.fields[k]);
+                });
+                if (response.status === 401 || response.status === 429 || response.status >= 500) {
+                    showError('formError', describeError(response.status, data));
+                } else if (f.general.length) {
+                    showError('formError', f.general.join(' '));
+                } else {
+                    showError('formError', 'Please fix the highlighted fields.');
+                }
+                if (firstInput) firstInput.focus();
+                return;
+            }
+
+            // The id of the new application: the documents step needs it.
+            var d = data || {};
+            state.applicationId = d.id || d.application_id || (d.application && d.application.id) || null;
+            if (!state.applicationId) {
+                showError('formError', 'Your application was created, but the server did not return its id. Please contact support.');
+                return;
+            }
+            try { sessionStorage.setItem('clinicApplicationId', String(state.applicationId)); } catch (err) { /* ignore */ }
+
+            state.email = $('applicantEmail').value.trim();
+            $('otpEmail').textContent = state.email;
+            showPanel('panelOtp');
+            startResendCountdown(RESEND_SECONDS);
+            $('otpCode').focus();
+        });
+
+        // ---- step 2: email OTP --------------------------------------------
+        function startResendCountdown(seconds) {
+            clearInterval(state.resendTimer);
+            var left = Number(seconds) || RESEND_SECONDS;
+            $('resendLink').style.display = 'none';
+            $('resendWait').style.display = 'inline';
+            function tick() {
+                if (left <= 0) {
+                    clearInterval(state.resendTimer);
+                    $('resendWait').style.display = 'none';
+                    $('resendLink').style.display = 'inline';
+                    return;
+                }
+                $('resendWait').textContent = 'You can request a new code in ' + left + 's';
+                left--;
+            }
+            tick();
+            state.resendTimer = setInterval(tick, 1000);
+        }
+
+        $('otpCode').addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 6); });
+
+        $('otpForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (state.busy) return;
+            clearErrors();
+            var otp = $('otpCode').value;
+            if (!/^\d{6}$/.test(otp)) { showError('otpError', 'Enter the 6-digit code from your email.'); return; }
+            state.busy = true;
+            var btn = $('verifyBtn');
+            btn.disabled = true; btn.textContent = 'Verifying...';
+
+            var res = await sendJson('/api/auth/verify-otp/', {
+                verification_method: 'EMAIL',
+                verification_identity: state.email,
+                otp: otp
+            });
+            state.busy = false;
+            btn.disabled = false; btn.textContent = 'Verify email';
+
+            if (res.networkError) { showError('otpError', 'Network error: could not reach the server.'); return; }
+            if (!res.ok) { showError('otpError', describeError(res.status, res.data)); return; }
+
+            clearInterval(state.resendTimer);
+            // If the backend signs the applicant in on verification, keep that token for the documents step.
+            var out = res.data || {};
+            var access = out.access || out.access_token || (out.tokens && out.tokens.access);
+            if (!access && state.username && state.password) {
+                // The documents step needs the applicant's JWT; sign in with the details just entered.
+                // Kept in sessionStorage only, so the rest of the site does not treat them as signed in.
+                var login = await sendJson('/api/auth/login/', { username_or_email: state.username, password: state.password });
+                if (login.ok && login.data) access = login.data.access;
+            }
+            state.password = '';
+            if (access) { try { sessionStorage.setItem('onboardingToken', access); } catch (err) { /* ignore */ } }
+            window.location.href = '/clinic-documents/?application=' + encodeURIComponent(state.applicationId);
+        });
+
+        $('resendLink').addEventListener('click', async function (e) {
+            e.preventDefault();
+            if (state.busy) return;
+            clearErrors();
+            state.busy = true;
+            var res = await sendJson('/api/auth/resend-otp/', { email: state.email });
+            state.busy = false;
+            if (res.networkError) { showError('otpError', 'Network error: could not reach the server.'); return; }
+            if (!res.ok) { showError('otpError', describeError(res.status, res.data)); return; }
+            $('otpCode').value = '';
+            startResendCountdown((res.data && res.data.resend_after_seconds) || RESEND_SECONDS);
+        });
+    </script>
+</body>
+</html>

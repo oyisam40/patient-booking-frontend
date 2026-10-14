@@ -105,3 +105,9 @@ def clinic_dashboard(request):
 def clinic_reports(request):
     return render(request, 'clinic_reports.html')
 
+def clinic_register(request):
+    return render(request, 'clinic_register.html')
+
+def clinic_documents(request):
+    return render(request, 'clinic_documents.html')
+

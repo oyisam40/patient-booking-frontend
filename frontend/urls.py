@@ -66,4 +66,8 @@ urlpatterns = [
     path('clinic-dashboard/', views.clinic_dashboard, name='clinic_dashboard'),
 
     path('clinic-reports/', views.clinic_reports, name='clinic_reports'),
+
+    path('clinic-register/', views.clinic_register, name='clinic_register'),
+
+    path('clinic-documents/', views.clinic_documents, name='clinic_documents'),
 ]

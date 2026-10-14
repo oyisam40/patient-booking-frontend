@@ -112,6 +112,9 @@
                         <button class="btn btn-teal mx-auto d-block" style="max-width: 320px; width: 100%;">Sign in</button>
                     </div>
                 </form>
+
+                <p class="small mt-2 mb-0">Own a clinic? <a href="/clinic-register/" class="forgot-link">Register your clinic</a></p>
+                <p class="small mt-0 mb-2">Don't have an account ? <a href="/register/" class="forgot-link">Register your account</a></p>
             </div>
         </div>
     </div>
@@ -131,6 +134,22 @@
             if (data.detail) return data.detail;
             if (data.message) return data.message;
             return 'Login failed. Please check your details and try again.';
+        }
+
+        // True if this user has applied to register a clinic (any status).
+        // Any failure means "no".
+        async function hasClinicApplication(accessToken) {
+            try {
+                const response = await fetch(API_BASE_URL + '/api/clinics/applications/my/', {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                if (!response.ok) return false;
+                const data = await response.json();
+                const list = Array.isArray(data) ? data : (data.applications || data.results || []);
+                return list.length > 0;
+            } catch (e) {
+                return false;
+            }
         }
 
         // True if this user is an active ADMIN of at least one clinic.
@@ -194,6 +213,18 @@
                         // A clinic admin keeps the PATIENT global role, so the
                         // role alone can't tell them apart: ask for memberships.
                         window.location.href = "/clinic-dashboard/";
+                    } else if (await hasClinicApplication(data.access)) {
+                        // A clinic applicant who is not approved yet: show the
+                        // application status (or the documents upload).
+                        window.location.href = "/clinic-documents/";
+                    } else if (role && role !== 'PATIENT') {
+                        // A role this site has no home page for: do not send them
+                        // to a page whose guard would bounce them back here.
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('refreshToken');
+                        localStorage.removeItem('userRole');
+                        loginError.textContent = 'Your account type (' + role + ') has no page here yet.';
+                        loginError.style.display = 'block';
                     } else {
                         window.location.href = "{% url 'patient_profile' %}";
                     }

@@ -256,6 +256,9 @@
         }
     </style>
     <script src="{% static 'js/guard.js' %}"></script>
+    <script src="{% static 'js/branding.js' %}"
+            data-logo="{% static 'images/Doconnect.jpg' %}"
+            data-bg="{% static 'images/alterfines-medicine-2361046_1920.jpg' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
     <script src="{% static 'js/clinic_context.js' %}"></script>
 </head>
@@ -336,7 +339,7 @@
                 <div id="todayList"></div>
 
                 <div class="quick-links">
-                    <a href="{% url 'clinic_calendar' %}" class="btn btn-teal">View Calendar</a>
+                    <a href="{% url 'clinic_calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
                     <a href="{% url 'clinic_appointments' %}" class="btn btn-outline-secondary">All Appointments</a>
                     <a href="{% url 'clinic_doctors_staff' %}" class="btn btn-outline-secondary">Manage Doctors &amp; Staff</a>
                     <a href="{% url 'clinic_reports' %}" class="btn btn-outline-secondary">View Reports</a>
