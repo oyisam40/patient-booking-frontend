@@ -16,6 +16,25 @@
         .bg3 { animation-duration: 5s; }
         @keyframes slide { 0% { transform: translateX(-25%) } 100% { transform: translateX(25%) } }
         body { min-height: 100vh; }
+        .app-topbar { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.08); display: flex; align-items: center; padding: 0 16px; z-index: 1050; }
+        .sidebar-toggle { background: none; border: none; font-size: 22px; color: #1B9AAA; cursor: pointer; padding: 4px 10px; margin-right: 12px; }
+        .app-logo { font-weight: 700; color: #1B9AAA; font-size: 18px; margin-right: 20px; }
+        .app-page-title { font-size: 16px; color: #555; font-weight: 600; }
+        .app-sidebar { position: fixed; top: 60px; left: 0; width: 240px; height: calc(100vh - 60px); background: #fff; box-shadow: 2px 0 8px rgba(0,0,0,.08); z-index: 1040; display: flex; flex-direction: column; justify-content: space-between; transition: transform .3s ease; overflow-y: auto; }
+        .sidebar-links { padding: 20px 0; }
+        .sidebar-link { display: block; padding: 12px 24px; color: #555; text-decoration: none; font-size: 15px; border-left: 3px solid transparent; }
+        a.sidebar-link:hover { background: #f4f7f8; color: #1B9AAA; }
+        .sidebar-link.active { background: #eafaf9; color: #1B9AAA; border-left-color: #1B9AAA; font-weight: 600; }
+        .sidebar-link.locked { color: #a9b3b7; cursor: not-allowed; }
+        .sidebar-link.locked .lock { float: right; font-size: 12px; }
+        .sidebar-footer { padding: 16px 24px; border-top: 1px solid #eee; }
+        .sidebar-logout { background: none; border: none; color: #c0392b; font-size: 15px; cursor: pointer; padding: 0; }
+        .sidebar-logout:hover { color: #a93226; text-decoration: underline; }
+        .app-content { margin-left: 240px; margin-top: 60px; padding: 32px 20px; transition: margin-left .3s ease; }
+        .page-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 28px; max-width: 760px; margin: 0 auto; }
+        body.sidebar-collapsed .app-sidebar { transform: translateX(-100%); }
+        body.sidebar-collapsed .app-content { margin-left: 0; }
+        @media (max-width: 768px) { .app-sidebar { transform: translateX(-100%); } .app-content { margin-left: 0; } body.sidebar-open .app-sidebar { transform: none; } }
 
         .btn-teal { background-color: #1B9AAA; border-color: #1B9AAA; color: white; }
         .btn-teal:hover:not(:disabled) { background-color: #16808f; border-color: #16808f; color: white; }
@@ -34,20 +53,50 @@
         .status-icon.ok { background: #d4edda; color: #155724; }
         .status-icon.wait { background: #fff3cd; color: #856404; }
         .status-icon.no { background: #f8d7da; color: #721c24; }
+        .doc-row { border: 1px solid #e3e8ea; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+        .doc-badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+        .doc-badge.ok { background: #d4edda; color: #155724; }
+        .doc-badge.wait { background: #fff3cd; color: #856404; }
+        .doc-badge.no { background: #f8d7da; color: #721c24; }
+        .doc-reason { background: #fdf0f1; color: #721c24; border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-top: 8px; }
         .progress { height: 8px; }
         .progress-bar { background-color: #1B9AAA; }
     </style>
+    <script src="{% static 'js/branding.js' %}"
+            data-logo="{% static 'images/Doconnect.jpg' %}"
+            data-bg="{% static 'images/alterfines-medicine-2361046_1920.jpg' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
-    <div class="bg"></div><div class="bg bg2"></div><div class="bg bg3"></div>
+    <header class="app-topbar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Menu">&#9776;</button>
+        <span class="app-logo">DOCONNECT</span>
+        <span class="app-page-title">My clinic application</span>
+    </header>
 
-    <div class="d-flex justify-content-center align-items-start" style="min-height: 100vh; padding: 2rem 0;">
-        <div class="card" style="max-width: 680px; width: 100%; margin: 1rem; box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.25);">
-            <div class="card-body p-4">
-                <div class="text-center">
-                    <img class="mb-3" src="{% static 'images/Doconnect.jpg' %}" height="100" alt="DoConnect Logo">
+    <nav class="app-sidebar" id="appSidebar">
+        <div class="sidebar-links">
+            <a href="/clinic-documents/" class="sidebar-link active">My application</a>
+            <span class="sidebar-link locked" data-href="{% url 'clinic_dashboard' %}" title="Available once your clinic is approved">Dashboard</span>
+            <span class="sidebar-link locked" data-href="{% url 'clinic_doctors_staff' %}" title="Available once your clinic is approved">Doctors &amp; Staff</span>
+            <span class="sidebar-link locked" data-href="{% url 'clinic_calendar' %}" title="Available once your clinic is approved">Calendar</span>
+            <span class="sidebar-link locked" data-href="{% url 'clinic_appointments' %}" title="Available once your clinic is approved">Appointments</span>
+            <span class="sidebar-link locked" data-href="{% url 'clinic_reports' %}" title="Available once your clinic is approved">Reports</span>
+            <span class="sidebar-link locked" data-href="{% url 'clinic_settings' %}" title="Available once your clinic is approved">Clinic Settings</span>
+            <span class="sidebar-link locked" data-href="{% url 'clinic_recruitment' %}" title="Available once your clinic is approved">Recruitment</span>
+            <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
+        </div>
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-logout" id="logoutBtn">Logout</button>
+        </div>
+    </nav>
+
+    <div class="app-content">
+        <div class="page-card">
+                <div class="alert alert-warning" id="accessBanner" style="display:none;" role="status">
+                    <strong>Limited access.</strong> <span id="accessBannerText">Your account can sign in, but the clinic tools stay locked until your clinic application is approved.</span>
                 </div>
+                <div class="small text-muted mb-3" id="appMeta" style="display:none;"></div>
 
                 <div class="panel active" id="panelLoading">
                     <p class="text-center text-muted my-4">Loading...</p>
@@ -60,7 +109,7 @@
 
                 <!-- DRAFT: documents and bank details -->
                 <div class="panel" id="panelForm">
-                    <div class="eyebrow">Step 3 of 3</div>
+                    <div class="eyebrow">Clinic application</div>
                     <h1 class="h3 mb-1 font-weight-normal">Upload your documents</h1>
                     <p class="text-muted small mb-2">Upload these so we can check your clinic before it goes live. Accepted: PDF, JPG or PNG, up to <span id="maxMb">5</span> MB each.</p>
 
@@ -94,9 +143,14 @@
                     <h1 class="h3 font-weight-normal" id="statusTitle"></h1>
                     <p class="text-muted mx-auto" style="max-width: 460px;" id="statusText"></p>
                     <div class="text-start mx-auto" style="max-width: 460px;" id="statusNotes"></div>
+                    <div class="alert alert-success text-start mx-auto" style="max-width: 520px; display:none;" id="statusNotice" role="status"></div>
+                    <div class="text-start mx-auto mt-3" style="max-width: 520px;" id="statusDocs"></div>
+                    <div class="mx-auto mt-3" style="max-width: 520px;">
+                        <div class="login-error text-start" id="resubmitError" style="display:none;"></div>
+                        <button type="button" class="btn btn-teal" id="resubmitBtn" style="display:none;">Resubmit application</button>
+                    </div>
                     <a class="btn btn-teal mt-2" id="statusLink" href="/">Back to sign in</a>
                 </div>
-            </div>
         </div>
     </div>
 
@@ -106,6 +160,12 @@
         //   POST /api/clinics/applications/{id}/documents/   multipart:
         //        documents (file, repeated) + document_types (text, repeated, same order),
         //        proof_document (file). Bank details are sent in step 1.
+        //        Four documents are sent: the three below plus PROOF_DOCUMENT, which is the
+        //        bank proof again, so each of the four can be reviewed on its own.
+        //   GET  /api/clinics/applications/{id}/ also lists the documents:
+        //        [{ id, document_type, review_status: PENDING | APPROVED | REJECTED, rejection_reason }]
+        //   POST /api/clinics/applications/documents/{docId}/replace/   multipart: file
+        //        Replaces a rejected document. The document goes back to PENDING.
         //        On success the status changes from DRAFT to PENDING.
         //
         // document_type is a free string on the backend (max 100 chars). CLINIC_REGISTRATION is what his test data uses; the other two are my choice. Change them here only.
@@ -117,6 +177,16 @@
             { value: 'APPLICANT_ID', title: 'ID of the person applying',
               hint: 'ID document or passport of the person registering the clinic. For an ID card, include both sides in one file.' }
         ];
+        var DOC_TITLES = {
+            CLINIC_REGISTRATION: 'Proof of business registration',
+            PROOF_OF_ADDRESS: 'Proof of clinic operating address',
+            APPLICANT_ID: 'ID of the person applying',
+            PROOF_DOCUMENT: 'Proof of bank account'
+        };
+        // Set to true once the backend accepts POST .../documents/{id}/replace/ while the
+        // application is REJECTED (Ntsako agreed to this; his resubmit commit does not include it yet).
+        // While false, a rejected application shows Resubmit first, and replace pickers appear once it is reopened.
+        var REPLACE_WHILE_REJECTED = true;
         var MAX_MB = 5;
         var ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
 
@@ -183,6 +253,18 @@
             return parts.length ? parts.join(' ') : 'Please check your details and try again.';
         }
 
+        // Collects every readable string from a backend error body, however it is nested.
+        function messageFrom(data) {
+            var out = [];
+            (function walk(v) {
+                if (v == null) return;
+                if (typeof v === 'string') { out.push(v); return; }
+                if (Array.isArray(v)) { v.forEach(walk); return; }
+                if (typeof v === 'object') { Object.keys(v).forEach(function (k) { walk(v[k]); }); }
+            })(data);
+            return out.join(' ');
+        }
+
         function authHeaders() { return { 'Authorization': 'Bearer ' + state.token }; }
 
         // ---- build the form -----------------------------------------------
@@ -246,6 +328,9 @@
                 form.append('documents', input.files[0]);
                 form.append('document_types', t.value);
             });
+            // the bank proof is also sent as the fourth document so it can be reviewed like the others
+            form.append('documents', $('proofDocument').files[0]);
+            form.append('document_types', 'PROOF_DOCUMENT');
             form.append('proof_document', $('proofDocument').files[0]);
 
             function done() {
@@ -289,34 +374,225 @@
         });
 
         // ---- status -------------------------------------------------------
+        function docTitle(d) {
+            var t = String(d.document_type || d.type || '');
+            return DOC_TITLES[t] || t.replace(/_/g, ' ').toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }) || 'Document';
+        }
+
+        function drawStatusDocs(app, allowReplace) {
+            var docs = app.documents || app.supporting_documents || [];
+            var box = $('statusDocs');
+            if (!docs.length) { box.innerHTML = ''; return; }
+            box.innerHTML = '<div class="section-title">Your documents</div>' + docs.map(function (d) {
+                var st = String(d.review_status || 'PENDING').toUpperCase();
+                var badge = st === 'APPROVED' ? '<span class="doc-badge ok">Approved</span>'
+                    : st === 'REJECTED' ? '<span class="doc-badge no">Needs replacing</span>'
+                    : '<span class="doc-badge wait">Waiting for review</span>';
+                var extra = '';
+                // allowReplace === 'all': a rejected application (the backend keeps it REJECTED while documents are replaced).
+                // allowReplace === 'open': a reopened application. In both modes only documents that are not approved can be replaced.
+                var canReplace = (allowReplace === 'all' || allowReplace === 'open') ? st !== 'APPROVED' : (allowReplace && st === 'REJECTED');   // approved documents never get a picker
+                if (st === 'REJECTED') {
+                    extra = '<div class="doc-reason"><strong>Reason:</strong> ' + escapeHtml(d.rejection_reason || 'No reason was given.') + '</div>';
+                }
+                if (canReplace) {
+                    extra += '<div class="mt-2">' +
+                        '<input type="file" class="form-control form-control-sm replace-file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">' +
+                        '<div class="field-error replace-error" style="display:none;"></div>' +
+                        '<button type="button" class="btn btn-sm btn-teal mt-2 replace-btn" data-doc="' + escapeHtml(d.id) + '">' +
+                        (st === 'REJECTED' ? 'Upload replacement' : 'Replace this document') + '</button></div>';
+                }
+                return '<div class="doc-row"><div class="d-flex justify-content-between align-items-center gap-2">' +
+                    '<div style="font-weight:600;">' + escapeHtml(docTitle(d)) + '</div>' + badge + '</div>' + extra + '</div>';
+            }).join('');
+        }
+
+        // Rejected application: reopen it for review. POST /api/clinics/applications/{id}/resubmit/
+        // -> 200 { message, application: { status: 'PENDING', ... } }
+        $('resubmitBtn').addEventListener('click', function () {
+            var btn = $('resubmitBtn');
+            var err = $('resubmitError');
+            if (state.busy) return;
+            err.style.display = 'none';
+            state.busy = true;
+            btn.disabled = true;
+            btn.textContent = 'Resubmitting...';
+            fetch(API_BASE_URL + '/api/clinics/applications/' + encodeURIComponent(state.applicationId) + '/resubmit/', {
+                method: 'POST', headers: authHeaders()
+            }).then(function (response) {
+                return response.json().catch(function () { return null; }).then(function (data) {
+                    state.busy = false;
+                    btn.disabled = false;
+                    btn.textContent = 'Resubmit application';
+                    if (!response.ok) {
+                        err.textContent = messageFrom(data) || describeError(response.status, data);
+                        err.style.display = 'block';
+                        return;
+                    }
+                    state.notice = (data && data.message) || 'Application resubmitted. It is pending review.';
+                    loadApplication();
+                });
+            }).catch(function () {
+                state.busy = false;
+                btn.disabled = false;
+                btn.textContent = 'Resubmit application';
+                err.textContent = 'Network error: could not reach the server. Please try again.';
+                err.style.display = 'block';
+            });
+        });
+
+        // Clear a stale "Please choose a file" message as soon as a file is picked.
+        $('statusDocs').addEventListener('change', function (e) {
+            var row = e.target.closest('.doc-row');
+            var err = row && row.querySelector('.replace-error');
+            if (err) err.style.display = 'none';
+        });
+
+        $('statusDocs').addEventListener('click', function (e) {
+            var btn = e.target.closest('.replace-btn');
+            if (!btn || state.busy) return;
+            var row = btn.closest('.doc-row');
+            var input = row.querySelector('.replace-file');
+            var err = row.querySelector('.replace-error');
+            err.style.display = 'none';
+            var file = input.files && input.files[0];
+            var problem = !file ? 'Please choose a file.' : validateFile(file);
+            if (problem) { err.textContent = problem; err.style.display = 'block'; return; }
+
+            state.busy = true;
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+            var form = new FormData();
+            form.append('file', file);
+            fetch(API_BASE_URL + '/api/clinics/applications/documents/' + encodeURIComponent(btn.getAttribute('data-doc')) + '/replace/', {
+                method: 'POST', headers: authHeaders(), body: form
+            }).then(function (response) {
+                return response.json().catch(function () { return null; }).then(function (data) {
+                    state.busy = false;
+                    if (!response.ok) {
+                        btn.disabled = false;
+                        btn.textContent = 'Upload replacement';
+                        err.textContent = describeError(response.status, data);
+                        err.style.display = 'block';
+                        return;
+                    }
+                    state.notice = ((data && data.message) || 'Replacement uploaded.') + (state.rejectedView ? ' Now click Resubmit application to send it back for review.' : '');
+                    loadApplication();
+                });
+            }).catch(function () {
+                state.busy = false;
+                btn.disabled = false;
+                btn.textContent = 'Upload replacement';
+                err.textContent = 'Network error: the file was not uploaded. Please try again.';
+                err.style.display = 'block';
+            });
+        });
+
+
+        // ---- limited access until approved ---------------------------------
+        function setAccess(approved, text) {
+            var banner = $('accessBanner');
+            // Other pages (Notifications) read this flag to keep the clinic links locked.
+            try {
+                if (approved) { sessionStorage.removeItem('clinicLocked'); }
+                else { sessionStorage.setItem('clinicLocked', '1'); sessionStorage.removeItem('adminClinicId'); }
+            } catch (e) { /* ignore */ }
+            if (approved) {
+                banner.style.display = 'none';
+                document.querySelectorAll('.sidebar-link.locked').forEach(function (el) {
+                    var a = document.createElement('a');
+                    a.className = 'sidebar-link';
+                    a.href = el.getAttribute('data-href');
+                    a.textContent = el.textContent.replace('\uD83D\uDD12', '').trim();
+                    el.parentNode.replaceChild(a, el);
+                });
+            } else {
+                if (text) $('accessBannerText').textContent = text;
+                banner.style.display = 'block';
+            }
+        }
+        function showMeta(app) {
+            var bits = [];
+            var clinic = app.clinic_name || (app.clinic && app.clinic.name) || app.name;
+            if (clinic) bits.push('Clinic: <strong>' + escapeHtml(clinic) + '</strong>');
+            if (app.applicant_name) bits.push('Applicant: <strong>' + escapeHtml(app.applicant_name) + '</strong>');
+            var meta = $('appMeta');
+            meta.innerHTML = bits.join(' &middot; ');
+            meta.style.display = bits.length ? 'block' : 'none';
+        }
+        $('sidebarToggle').addEventListener('click', function () {
+            document.body.classList.toggle(window.innerWidth <= 768 ? 'sidebar-open' : 'sidebar-collapsed');
+        });
+        $('logoutBtn').addEventListener('click', function () {
+            ['accessToken', 'refreshToken', 'userRole'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+            ['onboardingToken', 'clinicApplicationId', 'adminClinicId', 'clinicLocked'].forEach(function (k) { try { sessionStorage.removeItem(k); } catch (e) {} });
+            window.location.href = '/';
+        });
+
         function showStatus(app) {
             var status = String(app.status || '').toUpperCase();
             var notes = app.review_notes || app.rejection_reason || '';
             var icon = $('statusIcon');
             var link = $('statusLink');
             $('statusNotes').innerHTML = '';
+            var notice = $('statusNotice');
+            notice.style.display = state.notice ? 'block' : 'none';
+            notice.textContent = state.notice || '';
+            state.notice = '';
+            var docList = app.documents || app.supporting_documents || [];
+            var needsReplacing = docList.some(function (d) { return String(d.review_status || '').toUpperCase() === 'REJECTED'; });
             link.href = '/';
             link.textContent = 'Back to sign in';
+            link.style.display = 'none';
 
             if (status === 'APPROVED') {
                 icon.className = 'status-icon ok'; icon.innerHTML = '&#10003;';
                 $('statusTitle').textContent = 'Your clinic is approved';
-                $('statusText').textContent = 'Sign in with your account to manage your clinic.';
-                link.textContent = 'Sign in';
+                $('statusText').textContent = 'You now have full access. Open your dashboard to manage your clinic.';
+                link.href = '/clinic-dashboard/';
+                link.textContent = 'Go to dashboard';
+                link.style.display = 'inline-block';
             } else if (status === 'REJECTED') {
                 icon.className = 'status-icon no'; icon.innerHTML = '&#10005;';
                 $('statusTitle').textContent = 'Application not approved';
-                $('statusText').textContent = 'Your clinic application was not approved.';
+                $('statusText').textContent = (REPLACE_WHILE_REJECTED ? 'Your clinic application was not approved. Read the reason below, replace the document it mentions, then click Resubmit application. You do not need to start again.' : 'Your clinic application was not approved. Read the reason below, then click Resubmit application. It reopens for review and you can then replace the document it mentions. You do not need to start again.');
                 if (notes) {
                     $('statusNotes').innerHTML = '<div class="login-error"><strong>Reason:</strong> ' + escapeHtml(notes) + '</div>';
                 }
-                link.href = '/clinic-register/';
-                link.textContent = 'Start a new application';
+                link.style.display = 'none';   // no new application: the document is replaced here
+            } else if (needsReplacing) {
+                icon.className = 'status-icon no'; icon.innerHTML = '!';
+                $('statusTitle').textContent = 'Some documents need replacing';
+                $('statusText').textContent = 'Your application is still open. Upload a replacement for each document marked below and we will review it again.';
             } else {
                 icon.className = 'status-icon wait'; icon.innerHTML = '&#8987;';
                 $('statusTitle').textContent = 'Application submitted';
                 $('statusText').textContent = 'The DOCONNECT team is reviewing your clinic. We\'ll email you once a decision is made.';
             }
+            showMeta(app);
+            if (status === 'APPROVED') {
+                if (needsReplacing) {
+                    $('statusTitle').textContent = 'A document needs updating';
+                    $('statusText').textContent = 'Your clinic is approved. The DOCONNECT team asked for an updated document. Replace it below.';
+                    icon.className = 'status-icon no'; icon.innerHTML = '!';
+                }
+                setAccess(true);
+            } else if (status === 'REJECTED') {
+                setAccess(false, 'This application was not approved, so the clinic tools stay locked. Resubmit it to have it reviewed again.');
+            } else if (needsReplacing) {
+                setAccess(false, 'Replace the rejected documents below. The clinic tools unlock once every document is approved.');
+            } else {
+                setAccess(false, 'Your documents are with the DOCONNECT team. The clinic tools unlock once your clinic is approved.');
+            }
+            var reopened = status === 'PENDING' && !!notes;   // sent back after a rejection
+            if (reopened) {
+                $('statusNotes').innerHTML = '<div class="login-error"><strong>Earlier review note:</strong> ' + escapeHtml(notes) + '</div>';
+                $('statusText').textContent = 'Your application was reopened and is waiting for review. If the note below named a document, replace it now.';
+            }
+            $('resubmitError').style.display = 'none';
+            $('resubmitBtn').style.display = status === 'REJECTED' ? 'inline-block' : 'none';
+            state.rejectedView = status === 'REJECTED';
+            drawStatusDocs(app, status === 'REJECTED' ? (REPLACE_WHILE_REJECTED ? 'all' : false) : reopened ? 'open' : true);
             showPanel('panelStatus');
         }
 
@@ -335,6 +611,8 @@
             data = (data && data.application) || data;
             var status = String((data && data.status) || '').toUpperCase();
             if (status === 'DRAFT' || status === '') {
+                showMeta(data || {});
+                setAccess(false, 'Upload your documents to submit your application. The clinic tools unlock once your clinic is approved.');
                 buildForm();
                 showPanel('panelForm');
             } else {
@@ -368,7 +646,7 @@
         (async function init() {
             var params = new URLSearchParams(window.location.search);
             state.applicationId = params.get('application') || readStored(sessionStorage, 'clinicApplicationId');
-            state.token = readStored(sessionStorage, 'onboardingToken') || readStored(localStorage, 'accessToken');
+            state.token = readStored(localStorage, 'accessToken') || readStored(sessionStorage, 'onboardingToken');
 
             if (!state.token) {
                 showLoadError('Please sign in with your account to continue your application.');

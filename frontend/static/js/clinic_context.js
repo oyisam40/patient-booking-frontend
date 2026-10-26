@@ -31,7 +31,7 @@
     }
 
     function store(id) {
-        try { sessionStorage.setItem(STORAGE_KEY, String(id)); } catch (e) { /* ignore */ }
+        try { sessionStorage.setItem(STORAGE_KEY, String(id)); sessionStorage.removeItem('clinicLocked'); } catch (e) { /* ignore */ }
     }
 
     function findClinic(clinics, id) {
@@ -72,7 +72,7 @@
             if (String(m.role).toUpperCase() !== 'ADMIN' || m.is_active === false) return;
             if (seen[m.clinic]) return;
             seen[m.clinic] = true;
-            clinics.push({ id: m.clinic, name: m.clinic_name, is_active: true });
+            clinics.push({ id: m.clinic, name: m.clinic_name, is_active: true, clinic_status: m.clinic_status });
         });
         return { clinics: clinics, status: 200 };
     }
@@ -87,6 +87,20 @@
         var data = await response.json();
         var list = data.clinics || data.results || data;
         return { clinics: Array.isArray(list) ? list : [], status: 200 };
+    }
+
+    // A signed-in clinic applicant has no membership until approval: send them to
+    // their application page (clinic tools are locked) instead of a "no access" error.
+    async function redirectApplicant() {
+        try {
+            var response = await fetch(API_BASE_URL + '/api/clinics/applications/my/', { headers: authHeaders() });
+            if (!response.ok) return false;
+            var data = await response.json();
+            var list = Array.isArray(data) ? data : (data.applications || data.results || []);
+            if (!list.length) return false;
+            window.location.href = '/clinic-documents/';
+            return true;
+        } catch (e) { return false; }
     }
 
     async function init(options) {
@@ -110,6 +124,7 @@
                 options.onError(mine.status);
                 return;
             } else {
+                if (await redirectApplicant()) return;
                 options.onError(403); // logged in, but not a clinic admin
                 return;
             }

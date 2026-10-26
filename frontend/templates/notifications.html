@@ -263,6 +263,8 @@
                 <a href="{% url 'doctor_appointments' %}" class="sidebar-link">My Appointments</a>
                 <a href="{% url 'doctor_chat' %}" class="sidebar-link">Messages</a>
                 <a href="{% url 'doctor_documents' %}" class="sidebar-link">Verification Documents</a>
+                <a href="{% url 'vacancies' %}" class="sidebar-link">Careers</a>
+                <a href="{% url 'my_applications' %}" class="sidebar-link">My Applications</a>
                 <a href="{% url 'notifications' %}" class="sidebar-link active">Notifications</a>
             `;
         } else if (userRole === 'ADMIN') {
@@ -273,6 +275,22 @@
                 <a href="{% url 'admin_document_review' %}" class="sidebar-link">Document Review</a>
                 <a href="{% url 'notifications' %}" class="sidebar-link active">Notifications</a>
             `;
+        } else if (sessionStorage.getItem('clinicLocked') === '1') {
+            // Clinic applicant, not approved yet: keep the clinic links locked.
+            const lockedStyle = 'color:#a9b3b7;cursor:not-allowed;';
+            const tip = 'Available once your clinic is approved';
+            sidebarLinks.innerHTML = `
+                <a href="/clinic-documents/" class="sidebar-link">My application</a>
+                <span class="sidebar-link" style="${lockedStyle}"title="${tip}">Dashboard</span>
+                <span class="sidebar-link" style="${lockedStyle}"title="${tip}">Doctors &amp; Staff</span>
+                <span class="sidebar-link" style="${lockedStyle}"title="${tip}">Calendar</span>
+                <span class="sidebar-link" style="${lockedStyle}"title="${tip}">Appointments</span>
+                <span class="sidebar-link" style="${lockedStyle}"title="${tip}">Reports</span>
+                <span class="sidebar-link" style="${lockedStyle}"title="${tip}">Clinic Settings</span>
+                <span class="sidebar-link" style="${lockedStyle}"title="${tip}">Recruitment</span>
+                 <a href="{% url 'notifications' %}" class="sidebar-link active">Notifications</a>
+
+            `
         } else if (isClinicAdminSession()) {
             sidebarLinks.innerHTML = `
                 <a href="{% url 'clinic_dashboard' %}" class="sidebar-link">Dashboard</a>
@@ -281,8 +299,10 @@
                 <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments</a>
                 <a href="{% url 'clinic_reports' %}" class="sidebar-link">Reports</a>
                 <a href="{% url 'clinic_settings' %}" class="sidebar-link">Clinic Settings</a>
+                <a href="{% url 'clinic_recruitment' %}" class="sidebar-link">Recruitment</a>
+                <a href="/clinic-documents/" class="sidebar-link">My Application</a>
                 <a href="{% url 'notifications' %}" class="sidebar-link active">Notifications</a>
-            `;
+           `;
         } else {
             // PATIENT (default/fallback)
             sidebarLinks.innerHTML = `
@@ -291,6 +311,8 @@
                 <a href="{% url 'symptom_checker' %}" class="sidebar-link">Symptom Checker</a>
                 <a href="{% url 'browse_doctors' %}" class="sidebar-link">Find a Doctor</a>
                 <a href="{% url 'patient_chat' %}" class="sidebar-link">Messages</a>
+                <a href="{% url 'vacancies' %}" class="sidebar-link">Careers</a>
+                <a href="{% url 'my_applications' %}" class="sidebar-link">My Applications</a>
                 <a href="{% url 'notifications' %}" class="sidebar-link active">Notifications</a>
             `;
         }

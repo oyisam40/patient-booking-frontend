@@ -135,6 +135,11 @@
             padding: 10px 16px;
             margin-bottom: 8px;
         }
+        .slot-saved {
+            color: #1B9AAA;
+            font-size: 12px;
+            font-weight: 600;
+        }
         .remove-slot {
             color: #dc3545;
             cursor: pointer;
@@ -162,6 +167,8 @@
             <a href="{% url 'doctor_appointments' %}" class="sidebar-link">My Appointments</a>
             <a href="{% url 'doctor_chat' %}" class="sidebar-link">Messages</a>
             <a href="{% url 'doctor_documents' %}" class="sidebar-link">Verification Documents</a>
+            <a href="{% url 'vacancies' %}" class="sidebar-link">Careers</a>
+            <a href="{% url 'my_applications' %}" class="sidebar-link">My Applications</a>
             <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
         </div>
         <div class="sidebar-footer">
@@ -214,7 +221,7 @@
         <p class="text-muted text-center" id="noSlotsText">No slots added yet.</p>
     </div>
 
-    <div id="saveError" class="text-danger mb-3" style="display:none"></div>
+    <div id="saveError" class="text-danger mb-3" style="display:none; white-space: pre-line;"></div>
     <div id="saveSuccess" class="text-success mb-3" style="display:none"></div>
 
     <div class="d-flex gap-2">
@@ -225,7 +232,14 @@
 
 <script>
     const token = localStorage.getItem('accessToken');
-    let slots = [];
+    const AUTH = { 'Authorization': `Bearer ${token}` };
+    const DAY_NAMES = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+    let slots = [];   // new slots waiting to be saved
+    let saved = [];   // slots already on the server for the chosen clinic
+
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    const hhmm = t => String(t || '').slice(0, 5);
 
     document.getElementById('sidebarToggle').addEventListener('click', function () {
         document.body.classList.toggle('sidebar-collapsed');
@@ -239,16 +253,22 @@
 
     function renderSlotList() {
         const slotList = document.getElementById('slotList');
+        const all = saved.map(s => ({ s: s, isSaved: true, index: -1 }))
+            .concat(slots.map((s, i) => ({ s: s, isSaved: false, index: i })));
 
-        if (slots.length === 0) {
+        if (all.length === 0) {
             slotList.innerHTML = '<p class="text-muted text-center" id="noSlotsText">No slots added yet.</p>';
             return;
         }
 
-        slotList.innerHTML = slots.map((slot, index) => `
+        all.sort((a, b) => (a.s.day_of_week - b.s.day_of_week) || a.s.start_time.localeCompare(b.s.start_time));
+
+        slotList.innerHTML = all.map(x => `
         <div class="slot-item">
-            <span>${slot.day_name} &middot; ${slot.start_time} - ${slot.end_time}</span>
-            <span class="remove-slot" data-index="${index}">&times;</span>
+            <span>${esc(x.s.day_name)} &middot; ${esc(x.s.start_time)} - ${esc(x.s.end_time)}</span>
+            ${x.isSaved
+                ? '<span class="slot-saved">Saved</span>'
+                : `<span class="remove-slot" data-index="${x.index}" title="Remove">&times;</span>`}
         </div>
         `).join('');
 
@@ -259,6 +279,11 @@
                 renderSlotList();
             });
         });
+    }
+
+    // The first slot (saved or waiting) that overlaps the given time range.
+    function findConflict(day, start, end) {
+        return saved.concat(slots).find(s => s.day_of_week === day && start < s.end_time && end > s.start_time);
     }
 
     document.getElementById('addSlotBtn').addEventListener('click', function () {
@@ -283,6 +308,14 @@
             return;
         }
 
+        const clash = findConflict(parseInt(dayOfWeek), startTime, endTime);
+        if (clash) {
+            addSlotError.textContent = 'That overlaps ' + clash.day_name + ' ' + clash.start_time + ' - ' + clash.end_time +
+                (saved.indexOf(clash) !== -1 ? ', which is already saved.' : ', which you already added.');
+            addSlotError.style.display = 'block';
+            return;
+        }
+
         slots.push({
             day_of_week: parseInt(dayOfWeek),
             day_name: dayName,
@@ -296,14 +329,72 @@
         document.getElementById('endTime').value = '';
     });
 
+    // The server answers some failures with an HTML error page instead of JSON,
+    // so the body is read as text and turned into a short message here.
+    function explainFailure(status, text) {
+        if (/overlapping availability|already exists/i.test(text)) {
+            return { dup: true, msg: 'overlaps a slot that is already saved' };
+        }
+        try {
+            const d = JSON.parse(text);
+            if (typeof d === 'string') return { dup: false, msg: d };
+            if (d && d.detail) return { dup: false, msg: String(d.detail) };
+            return { dup: false, msg: JSON.stringify(d) };
+        } catch (e) { /* not JSON */ }
+        return { dup: false, msg: 'the server returned an error (' + status + ')' };
+    }
+
+    // Loads the slots already saved for the selected clinic. Returns false
+    // when they could not be read (the page then keeps what it knows).
+    async function loadSaved() {
+        const clinicId = document.getElementById('doctorClinicSelect').value;
+        if (!clinicId) { saved = []; renderSlotList(); return true; }
+
+        const unwrap = d => Array.isArray(d) ? d :
+            (d && (d.availability || d.availabilities || d.slots || d.results || d.data)) || null;
+        let list = null;
+        try {
+            let r = await fetch(API_BASE_URL + '/api/doctors/doctor/availability/?clinic=' + encodeURIComponent(clinicId), { headers: AUTH });
+            if (r.ok) list = unwrap(await r.json());
+            if (!Array.isArray(list)) {
+                const me = await fetch(API_BASE_URL + '/api/doctors/doctor/me/', { headers: AUTH });
+                if (me.ok) {
+                    const m = await me.json();
+                    const id = m.id != null ? m.id : (m.doctor && m.doctor.id);
+                    if (id != null) {
+                        const r2 = await fetch(API_BASE_URL + '/api/doctors/' + encodeURIComponent(id) + '/availability/?clinic=' + encodeURIComponent(clinicId), { headers: AUTH });
+                        if (r2.ok) list = unwrap(await r2.json());
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        if (!Array.isArray(list)) return false;
+
+        saved = list.filter(a => {
+            const c = a.clinic != null && typeof a.clinic === 'object' ? a.clinic.id : (a.clinic != null ? a.clinic : a.clinic_id);
+            return c == null || String(c) === String(clinicId);
+        }).map(a => {
+            let day = typeof a.day_of_week === 'number' ? a.day_of_week : parseInt(a.day_of_week, 10);
+            if (isNaN(day)) day = DAY_NAMES.indexOf(String(a.day_of_week || a.day_name || '').toUpperCase());
+            return { day_of_week: day, day_name: DAY_NAMES[day] || String(a.day_name || ''), start_time: hhmm(a.start_time), end_time: hhmm(a.end_time) };
+        }).filter(s => s.day_of_week >= 0);
+        renderSlotList();
+        return true;
+    }
+
     document.getElementById('saveSlotsBtn').addEventListener('click', async function () {
         const saveError = document.getElementById('saveError');
         const saveSuccess = document.getElementById('saveSuccess');
+        const btn = this;
         saveError.style.display = 'none';
         saveSuccess.style.display = 'none';
 
         if (slots.length === 0) {
-            saveError.textContent = 'Please add at least one slot before saving.';
+            saveError.textContent = saved.length
+                ? 'Nothing new to save. Add a slot first.'
+                : 'Please add at least one slot before saving.';
             saveError.style.display = 'block';
             return;
         }
@@ -315,17 +406,18 @@
             return;
         }
 
-        try {
-            let allSucceeded = true;
-            let lastError = null;
+        btn.disabled = true;
+        const done = [];      // saved just now
+        const already = [];   // the server already had them
+        const failed = [];    // text lines
+        const keep = [];      // still waiting
 
-            for (const slot of slots) {
+        for (const slot of slots) {
+            const label = slot.day_name + ' ' + slot.start_time + ' - ' + slot.end_time;
+            try {
                 const response = await fetch(API_BASE_URL + '/api/doctors/doctor/availability/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers: Object.assign({ 'Content-Type': 'application/json' }, AUTH),
                     body: JSON.stringify({
                         clinic: parseInt(clinicId, 10),
                         day_of_week: slot.day_of_week,
@@ -334,33 +426,49 @@
                         end_time: slot.end_time
                     })
                 });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    allSucceeded = false;
-                    lastError = data;
+                const text = await response.text();
+                if (response.ok) {
+                    done.push(slot);
+                } else {
+                    const why = explainFailure(response.status, text);
+                    if (why.dup) {
+                        already.push(slot);
+                    } else {
+                        keep.push(slot);
+                        failed.push(label + ': ' + why.msg);
+                    }
                 }
+            } catch (error) {
+                keep.push(slot);
+                failed.push(label + ': could not reach the server');
             }
+        }
 
-            if (allSucceeded) {
-                saveSuccess.textContent = 'Availability saved successfully!';
-                saveSuccess.style.display = 'block';
-                slots = [];
-                renderSlotList();
-            } else {
-                saveError.textContent = JSON.stringify(lastError);
-                saveError.style.display = 'block';
-            }
-        } catch (error) {
-            saveError.textContent = 'Network error: could not reach the server';
+        slots = keep;
+        const loaded = await loadSaved();
+        if (!loaded) {
+            // could not re-read the list, so remember what is now saved
+            done.concat(already).forEach(s => { if (!findConflict(s.day_of_week, s.start_time, s.end_time)) saved.push(s); });
+        }
+        renderSlotList();
+        btn.disabled = false;
+
+        const parts = [];
+        if (done.length) parts.push(done.length + (done.length === 1 ? ' slot saved.' : ' slots saved.'));
+        if (already.length) parts.push(already.length + (already.length === 1 ? ' slot was already saved.' : ' slots were already saved.'));
+        if (parts.length) {
+            saveSuccess.textContent = parts.join(' ');
+            saveSuccess.style.display = 'block';
+        }
+        if (failed.length) {
+            saveError.textContent = 'Could not save:\n' + failed.join('\n');
             saveError.style.display = 'block';
         }
     });
 
     (async function loadDoctorClinics() {
         const select = document.getElementById('doctorClinicSelect');
-        const headers = { 'Authorization': `Bearer ${token}` };
+        const headers = AUTH;
         let clinics = [];
         try {
             const r = await fetch(API_BASE_URL + '/api/clinics/my-memberships/', { headers: headers });
@@ -386,12 +494,18 @@
         } catch (e) {
             console.error(e);
         }
-        const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch =>
-            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
         select.innerHTML = clinics.length === 0
             ? '<option value="">No clinics found</option>'
             : (clinics.length > 1 ? '<option value="">Select a clinic</option>' : '') +
               clinics.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+
+        select.addEventListener('change', function () {
+            slots = [];
+            saved = [];
+            renderSlotList();
+            loadSaved();
+        });
+        loadSaved();
     })();
 </script>
 </body>

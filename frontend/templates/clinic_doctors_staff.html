@@ -249,6 +249,27 @@
             box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
         }
 
+        .user-results { border: 1px solid #dde3e6; border-radius: 8px; max-height: 220px; overflow-y: auto; margin-top: 6px; }
+        .user-result { display: block; width: 100%; text-align: left; background: #fff; border: 0; border-bottom: 1px solid #eef1f2; padding: 9px 12px; font-size: 14px; }
+        .user-result:last-child { border-bottom: 0; }
+        .user-result:hover:not(:disabled) { background: #eafaf9; }
+        .user-result:disabled { color: #999; background: #f7f8f8; cursor: not-allowed; }
+        .user-result small { display: block; color: #777; }
+        .picked-user { background: #eafaf9; border: 1px solid #b8e3e0; border-radius: 8px; padding: 8px 12px; font-size: 14px; margin-top: 8px; }
+        .page-notice { background: #d4edda; color: #155724; border-radius: 8px; padding: 10px 14px; font-size: 14px; margin-bottom: 14px; display: none; }
+        .member-role-tag { font-size: 12px; color: #1B9AAA; font-weight: 600; }
+
+        .member-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+        .avatar {
+            width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 700; font-size: 16px; object-fit: cover;
+        }
+        .avatar.lg { width: 72px; height: 72px; font-size: 24px; }
+        .detail-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px 14px; font-size: 14px; }
+        .detail-grid dt { color: #888; font-weight: 600; }
+        .detail-grid dd { margin: 0; color: #222; word-break: break-word; }
+
         .empty-state,
         .loading-state {
             text-align: center;
@@ -278,6 +299,8 @@
             <a href="{% url 'clinic_appointments' %}" class="sidebar-link">Appointments</a>
             <a href="{% url 'clinic_reports' %}" class="sidebar-link">Reports</a>
             <a href="{% url 'clinic_settings' %}" class="sidebar-link">Clinic Settings</a>
+            <a href="{% url 'clinic_recruitment' %}" class="sidebar-link">Recruitment</a>
+            <a href="/clinic-documents/" class="sidebar-link">My Application</a>
             <a href="{% url 'notifications' %}" class="sidebar-link">Notifications</a>
         </div>
         <div class="sidebar-footer">
@@ -289,12 +312,18 @@
         <div class="page-card">
             <div class="page-header-row">
                 <h1 class="h3 mb-0 font-weight-normal">Doctors &amp; Staff</h1>
-                <button type="button" class="btn btn-teal" id="openAddModalBtn">+ Add Doctor</button>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-teal" id="addMemberBtn" style="display:none;">+ Add member</button>
+                    <a href="{% url 'clinic_recruitment' %}" class="btn btn-outline-secondary">Recruitment</a>
+                </div>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
                 <div class="clinic-name-label mb-0" id="clinicNameLabel"></div>
                 <select id="clinicSelect" class="form-select form-select-sm" style="max-width:260px;display:none;" aria-label="Clinic"></select>
             </div>
+
+            <p class="text-muted small mb-3">Add a registered user with <strong>+ Add member</strong>, or accept an application in Recruitment and the applicant joins automatically.</p>
+            <div class="page-notice" id="pageNotice" role="status"></div>
 
             <div class="member-tabs">
                 <button type="button" class="member-tab active" id="tabDoctors">
@@ -302,6 +331,9 @@
                 </button>
                 <button type="button" class="member-tab" id="tabStaff">
                     Administrators<span class="member-tab-count" id="staffTabCount">0</span>
+                </button>
+                <button type="button" class="member-tab" id="tabOther">
+                    Staff &amp; HR<span class="member-tab-count" id="otherTabCount">0</span>
                 </button>
             </div>
 
@@ -311,21 +343,43 @@
         </div>
     </div>
 
-    <div class="modal-backdrop-custom" id="addModalBackdrop">
+    <div class="modal-backdrop-custom" id="detailBackdrop" role="dialog" aria-modal="true" aria-labelledby="detailName">
+        <div class="add-modal" style="max-width: 540px;">
+            <div class="member-id mb-3">
+                <div id="detailAvatar"></div>
+                <div>
+                    <h5 class="mb-0" id="detailName"></h5>
+                    <div class="member-meta" id="detailSub"></div>
+                </div>
+            </div>
+            <dl class="detail-grid mb-3" id="detailBody"></dl>
+            <div id="detailNote" class="small text-muted mb-3" style="display:none;"></div>
+            <button type="button" class="btn btn-outline-secondary w-100" id="detailClose">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-backdrop-custom" id="addBackdrop" role="dialog" aria-modal="true" aria-labelledby="addTitle">
         <div class="add-modal">
-            <h5 class="mb-3" id="addModalTitle">Add Doctor</h5>
+            <h5 class="mb-1" id="addTitle">Add a member</h5>
+            <p class="text-muted mb-3" style="font-size: 13px;">Choose a registered user and the category they will have in this clinic.</p>
 
             <div class="mb-3">
-                <label class="form-label">User ID</label>
-                <input type="number" min="1" id="addUserId" class="form-control" placeholder="The person's user id">
-                <div class="form-text">The person must already have a DOCONNECT account.</div>
+                <label class="form-label" for="addCategory">Category</label>
+                <select id="addCategory" class="form-select"></select>
             </div>
 
-            <div id="addError" class="text-danger mb-3" style="display:none;"></div>
+            <div class="mb-3">
+                <label class="form-label" for="addSearch">Find a registered user</label>
+                <input type="text" id="addSearch" class="form-control" placeholder="Choose a category first" autocomplete="off" disabled>
+                <div id="addResults" class="user-results" style="display:none;"></div>
+                <div id="addPicked" class="picked-user" style="display:none;"></div>
+            </div>
 
-            <div class="d-flex gap-2 mt-3">
-                <button type="button" class="btn btn-outline-secondary w-100" id="addModalDismiss">Cancel</button>
-                <button type="button" class="btn btn-teal w-100" id="addModalConfirm">Add</button>
+            <div id="addError" class="text-danger mb-3" style="display:none; white-space: pre-line;"></div>
+
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary w-100" id="addCancel">Cancel</button>
+                <button type="button" class="btn btn-teal w-100" id="addSubmit">Add to clinic</button>
             </div>
         </div>
     </div>
@@ -357,13 +411,16 @@
     // Real endpoints (Ntsako):
     //   GET   /api/clinics/{id}/members/  -> { count, members: [{ id, clinic, clinic_name,
     //                                          user_name, user_email, role, is_active, joined_at }] }
-    //   POST  /api/clinics/{id}/members/  { user: <user id>, role: 'DOCTOR' | 'ADMIN' }
+    // Members are created by the backend when a recruitment application is accepted.
     //   PATCH /api/clinics/{id}/members/{memberId}/  { is_active: true | false }
-    // Membership roles are PATIENT, DOCTOR and ADMIN (there is no STAFF role), so the
-    // second tab lists clinic administrators. Patients are not shown here.
+    //   GET   /api/clinics/{id}/member-categories/  categories the signed-in user may assign
+    //   POST  /api/clinics/{id}/members/  { user_id, role }  adds an existing user
+    //   GET   /api/clinics/{id}/available-members/?search=&role=  registered users that can be added
+    // Tabs: Doctors, Administrators (ADMIN, SYSTEM_ADMIN), Staff & HR (STAFF, HR).
 
     let activeTab = 'doctors';
     let currentClinicId = null;
+    let currentClinic = null;
     let members = [];
 
     // In-page dialog that replaces the browser's confirm() and alert().
@@ -458,7 +515,9 @@
 
     async function loadData(clinicId, clinic) {
         currentClinicId = clinicId;
+        currentClinic = clinic;
         members = [];
+        if (String(categoriesFor) !== String(clinicId)) loadCategories(clinicId);
         document.getElementById('clinicNameLabel').textContent = clinic && clinic.name ? clinic.name : '';
         showLoadMessage('Loading...');
         renderCounts();
@@ -492,21 +551,31 @@
     // RENDER
     // =========================================================
 
-    function roleForTab() { return activeTab === 'doctors' ? 'DOCTOR' : 'ADMIN'; }
+    const TAB_ROLES = {
+        doctors: ['DOCTOR'],
+        staff: ['ADMIN', 'SYSTEM_ADMIN'],
+        other: ['STAFF', 'HR']
+    };
+    const ROLE_LABEL = {
+        DOCTOR: 'Doctor', HR: 'Human Resources', STAFF: 'Staff',
+        ADMIN: 'Clinic Administrator', SYSTEM_ADMIN: 'Clinic System Administrator'
+    };
+
+    function roleForTab() { return TAB_ROLES[activeTab] || TAB_ROLES.doctors; }
 
     function membersForRole(role) {
-        return members.filter(m => String(m.role).toUpperCase() === role);
+        const roles = Array.isArray(role) ? role : [role];
+        return members.filter(m => roles.indexOf(String(m.role).toUpperCase()) !== -1);
     }
 
     function renderCounts() {
         document.getElementById('doctorsTabCount').textContent = membersForRole('DOCTOR').length;
-        document.getElementById('staffTabCount').textContent = membersForRole('ADMIN').length;
+        document.getElementById('staffTabCount').textContent = membersForRole(TAB_ROLES.staff).length;
+        document.getElementById('otherTabCount').textContent = membersForRole(TAB_ROLES.other).length;
     }
 
     function renderAll() {
         renderCounts();
-        document.getElementById('openAddModalBtn').textContent =
-            activeTab === 'doctors' ? '+ Add Doctor' : '+ Add Administrator';
         renderList();
     }
 
@@ -517,7 +586,9 @@
 
         if (rows.length === 0) {
             container.innerHTML = '';
-            emptyState.textContent = activeTab === 'doctors' ? 'No doctors added yet.' : 'No administrators added yet.';
+            emptyState.textContent = activeTab === 'doctors'
+                ? 'No doctors yet. Add one with + Add member, or accept an application in Recruitment.'
+                : (activeTab === 'staff' ? 'No administrators yet.' : 'No staff or HR members yet. Add one with + Add member.');
             emptyState.style.display = 'block';
             return;
         }
@@ -525,6 +596,9 @@
         emptyState.style.display = 'none';
         container.innerHTML = rows.map(memberRowHtml).join('');
 
+        container.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', () => openDetails(btn.getAttribute('data-id')));
+        });
         container.querySelectorAll('.toggle-status-btn').forEach(btn => {
             btn.addEventListener('click', () => toggleStatus(btn.getAttribute('data-id'), btn));
         });
@@ -537,22 +611,51 @@
         return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
+    // Picture shown next to a name. The members endpoint does not send a photo yet, so
+    // this shows coloured initials. If the backend later adds a picture field
+    // (profile_picture, avatar, user_picture or photo) it is used automatically.
+    const AVATAR_COLORS = ['#1B9AAA', '#2E86AB', '#6A4C93', '#C2548A', '#D9822B', '#3F8F5B'];
+
+    function memberInitials(name) {
+        const parts = String(name || '').replace(/^dr\.?\s+/i, '').trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return '?';
+        return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+    }
+
+    function avatarHtml(member, large) {
+        const cls = 'avatar' + (large ? ' lg' : '');
+        const pic = member.profile_picture || member.avatar || member.user_picture || member.photo;
+        if (pic) return `<img class="${cls}" src="${escapeHtml(pic)}" alt="">`;
+        const key = String(member.user_email || member.user_name || '');
+        let h = 0;
+        for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+        return `<div class="${cls}" style="background:${AVATAR_COLORS[h % AVATAR_COLORS.length]}">${escapeHtml(memberInitials(member.user_name))}</div>`;
+    }
+
     function memberRowHtml(member) {
-        const isDoctor = String(member.role).toUpperCase() === 'DOCTOR';
+        const roleKey = String(member.role).toUpperCase();
+        const isDoctor = roleKey === 'DOCTOR';
+        const canToggle = roleKey === 'DOCTOR' || roleKey === 'STAFF' || roleKey === 'HR';
         const isActive = member.is_active !== false;
         const status = isActive ? 'ACTIVE' : 'INACTIVE';
         const joined = formatJoined(member.joined_at);
 
         return `
             <div class="member-row">
-                <div>
-                    <div class="member-name">${isDoctor ? 'Dr. ' : ''}${escapeHtml(member.user_name)}</div>
-                    <div class="member-meta">${escapeHtml(member.user_email)}</div>
-                    ${joined ? `<div class="member-meta">Joined ${escapeHtml(joined)}</div>` : ''}
+                <div class="member-id">
+                    ${avatarHtml(member, false)}
+                    <div>
+                        <div class="member-name">${isDoctor ? 'Dr. ' : ''}${escapeHtml(member.user_name)}</div>
+                        <div class="member-meta">${escapeHtml(member.user_email)}</div>
+                        ${isDoctor ? '' : `<div class="member-role-tag">${escapeHtml(ROLE_LABEL[roleKey] || member.role)}</div>`}
+                        ${joined ? `<div class="member-meta">Joined ${escapeHtml(joined)}</div>` : ''}
+                    </div>
                 </div>
                 <div class="member-actions">
                     <span class="member-status-badge ${status.toLowerCase()}">${status}</span>
-                    ${isDoctor ? `<button type="button"
+                    ${isDoctor ? `<button type="button" class="btn btn-sm btn-outline-secondary view-btn"
+                            data-id="${escapeHtml(member.id)}">View</button>` : ''}
+                    ${canToggle ? `<button type="button"
                             class="btn btn-sm ${isActive ? 'btn-outline-danger' : 'btn-outline-secondary'} toggle-status-btn"
                             data-id="${escapeHtml(member.id)}">
                         ${isActive ? 'Deactivate' : 'Reactivate'}
@@ -570,11 +673,13 @@
         activeTab = tab;
         document.getElementById('tabDoctors').classList.toggle('active', tab === 'doctors');
         document.getElementById('tabStaff').classList.toggle('active', tab === 'staff');
+        document.getElementById('tabOther').classList.toggle('active', tab === 'other');
         renderAll();
     }
 
     document.getElementById('tabDoctors').addEventListener('click', () => setActiveTab('doctors'));
     document.getElementById('tabStaff').addEventListener('click', () => setActiveTab('staff'));
+    document.getElementById('tabOther').addEventListener('click', () => setActiveTab('other'));
 
     // =========================================================
     // ACTIVATE / DEACTIVATE
@@ -626,66 +731,330 @@
     }
 
     // =========================================================
-    // ADD DOCTOR / ADMINISTRATOR
+    // VIEW DOCTOR DETAILS
     // =========================================================
 
+    let clinicDoctorsCache = { clinicId: null, list: null };
+    let detailFor = null;
+
+    function normName(value) {
+        return String(value || '').toLowerCase().replace(/^dr\.?\s+/, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function detailRows(rows) {
+        return rows.filter(r => r[1] !== null && r[1] !== undefined && r[1] !== '')
+            .map(r => `<dt>${escapeHtml(r[0])}</dt><dd>${escapeHtml(r[1])}</dd>`).join('');
+    }
+
+    function closeDetails() {
+        detailFor = null;
+        document.getElementById('detailBackdrop').classList.remove('open');
+    }
+
+    async function findDoctorProfile(member) {
+        const clinicId = currentClinicId;
+        if (clinicDoctorsCache.clinicId !== clinicId || !clinicDoctorsCache.list) {
+            const res = await api('GET', `/api/clinics/${clinicId}/doctors/`);
+            if (!res.ok) return null;
+            const d = res.data;
+            const list = (d && (d.doctors || d.results)) || d;
+            clinicDoctorsCache = { clinicId: clinicId, list: Array.isArray(list) ? list : [] };
+        }
+        const email = String(member.user_email || '').toLowerCase();
+        const name = normName(member.user_name);
+        return clinicDoctorsCache.list.find(d => {
+            const e = String(d.email || d.user_email || '').toLowerCase();
+            if (e && email) return e === email;
+            return normName(d.name || `${d.first_name || ''} ${d.last_name || ''}`) === name;
+        }) || null;
+    }
+
+    async function openDetails(id) {
+        const member = members.find(m => String(m.id) === String(id));
+        if (!member) return;
+        detailFor = member.id;
+
+        document.getElementById('detailAvatar').innerHTML = avatarHtml(member, true);
+        document.getElementById('detailName').textContent = 'Dr. ' + (member.user_name || '');
+        document.getElementById('detailSub').textContent = member.user_email || '';
+        const note = document.getElementById('detailNote');
+        note.style.display = 'block';
+        note.textContent = 'Loading profile...';
+
+        const base = [
+            ['Role', 'Doctor'],
+            ['Status', member.is_active !== false ? 'Active' : 'Inactive'],
+            ['Joined clinic', formatJoined(member.joined_at)],
+            ['Email', member.user_email]
+        ];
+        const body = document.getElementById('detailBody');
+        body.innerHTML = detailRows(base);
+        document.getElementById('detailBackdrop').classList.add('open');
+
+        try {
+            const match = await findDoctorProfile(member);
+            if (detailFor !== member.id) return;
+            if (!match || match.id === undefined) {
+                note.textContent = 'No further profile details are available for this doctor.';
+                return;
+            }
+            const res = await api('GET', `/api/doctors/doctors/${encodeURIComponent(match.id)}/`);
+            if (detailFor !== member.id) return;
+            if (!res.ok) { note.textContent = 'Could not load the full profile.'; return; }
+            const p = res.data || {};
+            const extra = [
+                ['Specialization', p.specialization || match.specialization],
+                ['Rating', p.rating],
+                ['Experience', p.years_of_experience || p.experience],
+                ['Qualifications', p.qualifications],
+                ['Licence number', p.license_number],
+                ['Phone', p.phone_number || p.phone],
+                ['About', p.bio]
+            ];
+            body.innerHTML = detailRows(base.concat(extra));
+            note.style.display = 'none';
+        } catch (error) {
+            console.error(error);
+            if (detailFor === member.id) note.textContent = 'Could not load the full profile.';
+        }
+    }
+
+    document.getElementById('detailClose').addEventListener('click', closeDetails);
+    document.getElementById('detailBackdrop').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeDetails();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetails(); });
+
+    // =========================================================
+    // ADD MEMBER
+    // =========================================================
+
+    let categories = [];
+    let categoriesFor = null;
+    let categoriesError = '';
+    let pickedUser = null;
+    let searchTimer = null;
+    let searchSeq = 0;
+    let foundUsers = [];
+
+    // Real endpoint (Ntsako): GET /api/clinics/{id}/available-members/?search=&role=
+    // Response: a list (or an object holding one) of registered users who can be added,
+    // read as { id | user_id, name | full_name | user_name, email | user_email }.
+    // If the server expects a different query name than "search", change it here.
+    // "role" is required by the backend: it decides who can be offered
+    // (doctors must already be approved on the platform).
+    function userSearchPath(clinicId, query, role) {
+        return `/api/clinics/${clinicId}/available-members/?search=${encodeURIComponent(query)}&role=${encodeURIComponent(role)}`;
+    }
+
+    function normalizeCategories(data) {
+        const raw = Array.isArray(data) ? data
+            : ((data && (data.categories || data.results || data.roles || data.options)) || []);
+        return raw.map(c => {
+            if (typeof c === 'string') return { value: c, label: ROLE_LABEL[c.toUpperCase()] || c };
+            const value = c.value || c.role || c.code || c.id;
+            return { value: value, label: c.label || c.name || c.display || ROLE_LABEL[String(value).toUpperCase()] || value };
+        }).filter(c => c.value);
+    }
+
+    async function loadCategories(clinicId) {
+        categoriesFor = clinicId;
+        categories = [];
+        categoriesError = '';
+        const btn = document.getElementById('addMemberBtn');
+        btn.style.display = 'none';
+        let result;
+        try {
+            result = await api('GET', `/api/clinics/${clinicId}/member-categories/`);
+        } catch (error) {
+            console.error(error);
+            if (String(currentClinicId) !== String(clinicId)) return;
+            categoriesError = 'Could not reach the server to load the categories.';
+            btn.style.display = '';
+            return;
+        }
+        if (String(currentClinicId) !== String(clinicId)) return;
+        if (result.status === 401 || result.status === 403) return; // not allowed to add members
+        if (!result.ok) {
+            categoriesError = describeError(result.status, result.data);
+        } else {
+            categories = normalizeCategories(result.data);
+            if (categories.length === 0) return; // nothing this user may assign
+        }
+        btn.style.display = '';
+    }
+
+    function showPageNotice(message) {
+        const box = document.getElementById('pageNotice');
+        box.textContent = message;
+        box.style.display = 'block';
+        clearTimeout(showPageNotice.t);
+        showPageNotice.t = setTimeout(() => { box.style.display = 'none'; }, 8000);
+    }
+
+    function setAddError(message) {
+        const box = document.getElementById('addError');
+        box.textContent = message || '';
+        box.style.display = message ? 'block' : 'none';
+    }
+
     function openAddModal() {
-        document.getElementById('addModalTitle').textContent =
-            activeTab === 'doctors' ? 'Add Doctor' : 'Add Administrator';
-        document.getElementById('addModalBackdrop').classList.add('open');
+        pickedUser = null;
+        foundUsers = [];
+        document.getElementById('addSearch').value = '';
+        document.getElementById('addSearch').disabled = true;
+        document.getElementById('addSearch').placeholder = 'Choose a category first';
+        document.getElementById('addResults').style.display = 'none';
+        document.getElementById('addPicked').style.display = 'none';
+        document.getElementById('addSubmit').disabled = false;
+        setAddError(categoriesError);
+        const select = document.getElementById('addCategory');
+        select.innerHTML = categories.length === 0
+            ? '<option value="">No categories available</option>'
+            : '<option value="">Choose a category</option>' +
+              categories.map(c => `<option value="${escapeHtml(c.value)}">${escapeHtml(c.label)}</option>`).join('');
+        document.getElementById('addBackdrop').classList.add('open');
+        select.focus();
     }
 
     function closeAddModal() {
-        document.getElementById('addModalBackdrop').classList.remove('open');
-        document.getElementById('addError').style.display = 'none';
-        document.getElementById('addUserId').value = '';
-        document.getElementById('addModalConfirm').disabled = false;
+        document.getElementById('addBackdrop').classList.remove('open');
     }
 
-    document.getElementById('openAddModalBtn').addEventListener('click', openAddModal);
-    document.getElementById('addModalDismiss').addEventListener('click', closeAddModal);
+    function memberRoleForEmail(email) {
+        const key = String(email || '').toLowerCase();
+        const m = members.find(x => String(x.user_email || '').toLowerCase() === key);
+        return m ? (ROLE_LABEL[String(m.role).toUpperCase()] || m.role) : null;
+    }
 
-    document.getElementById('addModalConfirm').addEventListener('click', async function () {
-        const errorBox = document.getElementById('addError');
-        const confirmBtn = document.getElementById('addModalConfirm');
-        errorBox.style.display = 'none';
-
-        const userId = parseInt(document.getElementById('addUserId').value, 10);
-        if (!userId || userId < 1) {
-            errorBox.textContent = 'Please enter the user id of an existing account.';
-            errorBox.style.display = 'block';
+    function renderResults(message) {
+        const box = document.getElementById('addResults');
+        box.style.display = 'block';
+        if (message) {
+            box.innerHTML = `<div class="p-2 small text-muted">${escapeHtml(message)}</div>`;
             return;
         }
+        box.innerHTML = foundUsers.map((u, i) => {
+            const already = memberRoleForEmail(u.email);
+            return `<button type="button" class="user-result" data-i="${i}" ${already ? 'disabled' : ''}>
+                ${escapeHtml(u.name || u.email)}
+                <small>${escapeHtml(u.email)}${already ? ' · already a member (' + escapeHtml(already) + ')' : ''}</small>
+            </button>`;
+        }).join('');
+        box.querySelectorAll('.user-result').forEach(btn => {
+            btn.addEventListener('click', () => pickUser(foundUsers[parseInt(btn.getAttribute('data-i'), 10)]));
+        });
+    }
 
+    function pickUser(user) {
+        pickedUser = user;
+        document.getElementById('addResults').style.display = 'none';
+        const chip = document.getElementById('addPicked');
+        chip.innerHTML = `Selected: <strong>${escapeHtml(user.name || user.email)}</strong> (${escapeHtml(user.email)})`;
+        chip.style.display = 'block';
+        setAddError('');
+    }
+
+    async function runSearch(query) {
         const clinicId = currentClinicId;
-        if (clinicId === null) return;
-        const role = roleForTab();
-        confirmBtn.disabled = true;
-
+        const role = document.getElementById('addCategory').value;
+        if (!role) { renderResults('Choose a category first.'); return; }
+        const seq = ++searchSeq;
+        renderResults('Searching...');
         let result;
         try {
-            result = await api('POST', `/api/clinics/${clinicId}/members/`, { user_id: userId, user: userId, role: role });
+            result = await api('GET', userSearchPath(clinicId, query, role));
         } catch (error) {
             console.error(error);
-            errorBox.textContent = 'Network error: could not add this person.';
-            errorBox.style.display = 'block';
-            confirmBtn.disabled = false;
+            if (seq === searchSeq) renderResults('Could not reach the server.');
             return;
         }
-
+        if (seq !== searchSeq) return; // a newer search replaced this one
+        if (result.status === 404 || result.status === 405) {
+            renderResults('User search is not available on the server yet.');
+            return;
+        }
         if (!result.ok) {
-            errorBox.textContent = describeError(result.status, result.data);
-            errorBox.style.display = 'block';
-            confirmBtn.disabled = false;
+            renderResults(describeError(result.status, result.data));
             return;
         }
+        const list = Array.isArray(result.data) ? result.data
+            : ((result.data && (result.data.results || result.data.available_members || result.data.users || result.data.candidates || result.data.members)) || []);
+        foundUsers = list.map(u => ({
+            id: u.id != null ? u.id : u.user_id,
+            name: u.name || u.full_name || u.user_name ||
+                [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || '',
+            email: u.email || u.user_email || ''
+        })).filter(u => u.id != null);
+        renderResults(foundUsers.length === 0 ? 'No registered users match that search.' : '');
+    }
 
-        closeAddModal();
-        // Reload so the list shows exactly what the server stored (name, email, joined date).
-        if (String(currentClinicId) === String(clinicId)) {
-            await loadData(clinicId, { name: document.getElementById('clinicNameLabel').textContent });
+    // The people on offer depend on the category, so changing it starts the search again.
+    document.getElementById('addCategory').addEventListener('change', function () {
+        const search = document.getElementById('addSearch');
+        search.disabled = !this.value;
+        search.placeholder = this.value ? 'Search by name or email (at least 2 letters)' : 'Choose a category first';
+        pickedUser = null;
+        foundUsers = [];
+        document.getElementById('addPicked').style.display = 'none';
+        document.getElementById('addResults').style.display = 'none';
+        setAddError('');
+        if (this.value) {
+            search.focus();
+            if (search.value.trim().length >= 2) runSearch(search.value.trim());
         }
     });
+
+    document.getElementById('addSearch').addEventListener('input', function () {
+        pickedUser = null;
+        document.getElementById('addPicked').style.display = 'none';
+        clearTimeout(searchTimer);
+        const q = this.value.trim();
+        if (q.length < 2) {
+            document.getElementById('addResults').style.display = 'none';
+            return;
+        }
+        searchTimer = setTimeout(() => runSearch(q), 300);
+    });
+
+    document.getElementById('addSubmit').addEventListener('click', async function () {
+        const role = document.getElementById('addCategory').value;
+        if (!role) { setAddError('Choose a category.'); return; }
+        if (!pickedUser) { setAddError('Search for a registered user and select them.'); return; }
+
+        setAddError('');
+        const btn = this;
+        const clinicId = currentClinicId;
+        btn.disabled = true;
+        let result;
+        try {
+            result = await api('POST', `/api/clinics/${clinicId}/members/`, { user_id: pickedUser.id, role: role });
+        } catch (error) {
+            console.error(error);
+            btn.disabled = false;
+            setAddError('Could not reach the server. Nothing was saved.');
+            return;
+        }
+        btn.disabled = false;
+        if (!result.ok) {
+            setAddError(describeError(result.status, result.data));
+            return;
+        }
+
+        const message = (result.data && result.data.message) || 'Member added.';
+        closeAddModal();
+        showPageNotice(message);
+        if (String(currentClinicId) === String(clinicId)) {
+            await loadData(clinicId, currentClinic);
+            const r = role.toUpperCase();
+            setActiveTab(TAB_ROLES.doctors.indexOf(r) !== -1 ? 'doctors' : (TAB_ROLES.staff.indexOf(r) !== -1 ? 'staff' : 'other'));
+        }
+    });
+
+    document.getElementById('addMemberBtn').addEventListener('click', openAddModal);
+    document.getElementById('addCancel').addEventListener('click', closeAddModal);
+    document.getElementById('addBackdrop').addEventListener('click', e => { if (e.target === e.currentTarget) closeAddModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAddModal(); });
 
     ClinicContext.init({
         selectId: 'clinicSelect',

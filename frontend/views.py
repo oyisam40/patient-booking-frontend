@@ -111,3 +111,12 @@ def clinic_register(request):
 def clinic_documents(request):
     return render(request, 'clinic_documents.html')
 
+def vacancies(request):
+    return render(request, 'vacancies.html')
+
+def clinic_recruitment(request):
+    return render(request, 'clinic_recruitment.html')
+
+def my_applications(request):
+    return render(request, 'my_applications.html')
+

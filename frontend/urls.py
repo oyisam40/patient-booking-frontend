@@ -70,4 +70,10 @@ urlpatterns = [
     path('clinic-register/', views.clinic_register, name='clinic_register'),
 
     path('clinic-documents/', views.clinic_documents, name='clinic_documents'),
+
+    path('vacancies/', views.vacancies, name='vacancies'),
+
+    path('clinic-recruitment/', views.clinic_recruitment, name='clinic_recruitment'),
+
+    path('my-applications/', views.my_applications, name='my_applications'),
 ]

@@ -16,7 +16,7 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--overlay), url("{% static 'images/alterfines-medicine-2361046_1920.jpg' %}") center/cover no-repeat fixed;
+            background: #1B9AAA;
             min-height: 100vh;
             margin: 0;
             display: flex;
@@ -26,6 +26,18 @@
             text-align: center;
             padding: 24px;
         }
+        .bg-slides, .bg-tint { position: fixed; inset: 0; z-index: 0; }
+        .bg-slides { background: #1B9AAA; }
+        .bg-slides .slide {
+            position: absolute; inset: 0;
+            background-size: cover; background-position: center;
+            opacity: 0; transition: opacity 1.6s ease;
+        }
+        .bg-slides .slide.on { opacity: 1; }
+        .bg-tint { background: var(--overlay); }
+        .tagline, .brand, .subtitle, .get-started-btn, .careers-link { position: relative; z-index: 1; }
+        @media (prefers-reduced-motion: reduce) { .bg-slides .slide { transition: none; } }
+
         .tagline {
             color: rgba(255, 255, 255, 0.9);
             font-size: 12px;
@@ -127,14 +139,28 @@
             border: none;
         }
         .back-link:hover { color: #1B9AAA; }
+
+        .careers-link {
+            margin-top: 18px;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .careers-link:hover { color: #fff; }
     </style>
 </head>
 <body>
+
+<div class="bg-slides" id="bgSlides" aria-hidden="true"></div>
+<div class="bg-tint" aria-hidden="true"></div>
 
 <div class="tagline">For your convenience</div>
 <h1 class="brand">DoConnect</h1>
 <p class="subtitle">Book appointments with trusted doctors, or manage your practice — all in one place.</p>
 <button class="get-started-btn" id="getStartedBtn">Get Started</button>
+<a class="careers-link" href="{% url 'vacancies' %}">Browse open positions</a>
 
 <div class="overlay-bg" id="choiceOverlay">
     <div class="choice-card" id="mainChoiceCard">
@@ -176,6 +202,33 @@
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js" integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V" crossorigin="anonymous"></script>
 <script>
+    // Background slideshow. Add photos to frontend/static/images/ with these names
+    // (or edit the list). Files that do not exist are skipped automatically.
+    const SLIDES = [
+        "{% static 'images/alterfines-medicine-2361046_1920.jpg' %}",
+        "{% static 'images/docc.jpg' %}",
+        "{% static 'images/femaledoc.jpg' %}",
+        "{% static 'images/helpatient.jpg' %}"
+    ];
+    (function () {
+        const box = document.getElementById('bgSlides');
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const check = src => new Promise(res => { const i = new Image(); i.onload = () => res(src); i.onerror = () => res(null); i.src = src; });
+        Promise.all(SLIDES.map(check)).then(list => {
+            const ok = list.filter(Boolean);
+            if (!ok.length) return;
+            const els = ok.map(src => { const d = document.createElement('div'); d.className = 'slide'; d.style.backgroundImage = 'url("' + src + '")'; box.appendChild(d); return d; });
+            let i = 0;
+            els[0].classList.add('on');
+            if (els.length < 2 || reduce) return;
+            setInterval(() => {
+                if (document.hidden) return;
+                els[i].classList.remove('on');
+                i = (i + 1) % els.length;
+                els[i].classList.add('on');
+            }, 6000);
+        });
+    })();
 
     const overlay = document.getElementById('choiceOverlay');
     const mainCard = document.getElementById('mainChoiceCard');

@@ -196,6 +196,14 @@
         .review-section { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #1B9AAA; margin: 16px 0 8px; }
         .review-grid { display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px; font-size: 14px; }
         .review-label { color: #6c757d; }
+        .doc-item { border-bottom: 1px solid #eee; padding: 2px 0; }
+        .doc-item .review-doc { border-bottom: 0; }
+        .doc-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 9px; border-radius: 20px; margin-left: 6px; }
+        .doc-badge.approved { background: #d4edda; color: #155724; }
+        .doc-badge.rejected { background: #f8d7da; color: #721c24; }
+        .doc-badge.pending { background: #e9ecef; color: #495057; }
+        .doc-reason { font-size: 13px; color: #721c24; background: #fdf0f1; border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; white-space: pre-line; }
+        .doc-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
         .review-doc { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
         .modal-backdrop-custom {
             display: none;
@@ -251,9 +259,6 @@
             padding: 30px 0;
         }
     </style>
-    <script src="{% static 'js/branding.js' %}"
-            data-logo="{% static 'images/Doconnect.jpg' %}"
-            data-bg="{% static 'images/alterfines-medicine-2361046_1920.jpg' %}"></script>
     <script src="{% static 'js/config.js' %}"></script>
 </head>
 <body>
@@ -287,7 +292,13 @@
 
             <div class="alert alert-success" id="pageNotice" style="display:none;"></div>
 
-            <h2 class="h5 mt-2 mb-2">Applications awaiting review <span class="text-muted" id="applicationCount"></span></h2>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2 mb-2">
+                <h2 class="h5 mb-0">Applications <span class="text-muted" id="applicationCount"></span></h2>
+                <select id="appFilter" class="form-select form-select-sm" style="width:auto;" aria-label="Show applications">
+                    <option value="PENDING">Awaiting review</option>
+                    <option value="APPROVED">Approved (payments setup)</option>
+                </select>
+            </div>
             <div id="applicationList" class="mb-4"><div class="text-muted small">Loading applications...</div></div>
 
             <h2 class="h5 mb-2">Clinics</h2>
@@ -368,12 +379,31 @@
                 <div id="reviewDetails" class="review-grid"></div>
                 <div class="review-section">Documents</div>
                 <div id="reviewDocs"></div>
+                <div id="docSummary" class="small mt-2" style="font-weight:600;"></div>
                 <div class="review-section">Banking details</div>
                 <div id="reviewBank" class="review-grid"></div>
                 <div class="mt-2"><button type="button" class="btn btn-sm btn-outline-secondary" id="bankProofBtn">Download bank proof</button></div>
 
+                <div id="payPanel" style="display:none;">
+                    <div class="review-section">Payments setup</div>
+                    <div id="payStatus" class="small mb-2" style="font-weight:600;"></div>
+                    <div id="payVerifyBox">
+                        <label class="form-label small" for="payBankCode">Paystack bank code</label>
+                        <input id="payBankCode" class="form-control form-control-sm mb-2" maxlength="20" placeholder="Bank code from Paystack's list">
+                        <label class="form-label small" for="payNotes">Verification notes (optional)</label>
+                        <textarea id="payNotes" class="form-control form-control-sm mb-2" rows="2" maxlength="500"></textarea>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="payConfirm">
+                            <label class="form-check-label small" for="payConfirm">I have checked the bank details against the proof document.</label>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-teal" id="payVerifyBtn">Verify bank details</button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-teal" id="paySubBtn" style="display:none;">Create Paystack subaccount</button>
+                    <div id="payMsg" class="small mt-2" style="white-space: pre-line;"></div>
+                </div>
+
                 <div class="mt-3" id="rejectWrap" style="display:none;">
-                    <label class="form-label" for="rejectNotes">Reason for rejection (sent to the applicant)</label>
+                    <label class="form-label" for="rejectNotes">Reason for rejecting the whole application (sent to the applicant)</label>
                     <textarea id="rejectNotes" class="form-control" rows="3" maxlength="500"></textarea>
                 </div>
             </div>
@@ -730,7 +760,8 @@
         const box = document.getElementById('applicationList');
         let list;
         try {
-            const response = await fetch(API_BASE_URL + '/api/clinics/applications/review/', { headers: authHeaders() });
+            const filter = document.getElementById('appFilter').value;
+            const response = await fetch(API_BASE_URL + '/api/clinics/applications/review/?status=' + encodeURIComponent(filter), { headers: authHeaders() });
             const data = await readJson(response);
             if (!response.ok) {
                 box.innerHTML = `<div class="text-danger small" style="white-space: pre-line;">${escapeHtml(describeError(data, response.status))}</div>`;
@@ -743,14 +774,18 @@
             return;
         }
         applications = Array.isArray(list) ? list : [];
+        // If the server ignores the status filter, keep only what was asked for.
+        const want = document.getElementById('appFilter').value;
+        applications = applications.filter(a => !a.status || String(a.status).toUpperCase() === want);
         renderApplications();
     }
+    document.getElementById('appFilter').addEventListener('change', loadApplications);
 
     function renderApplications() {
         const box = document.getElementById('applicationList');
         document.getElementById('applicationCount').textContent = applications.length ? `(${applications.length})` : '';
         if (applications.length === 0) {
-            box.innerHTML = '<div class="text-muted small">No applications waiting for review.</div>';
+            box.innerHTML = '<div class="text-muted small">' + (document.getElementById('appFilter').value === 'APPROVED' ? 'No approved applications to show.' : 'No applications waiting for review.') + '</div>';
             return;
         }
         box.innerHTML = applications.map(app => {
@@ -765,7 +800,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="clinic-status-badge pending">${escapeHtml(app.status || 'PENDING')}</span>
-                    <button type="button" class="btn btn-sm btn-teal review-btn" data-id="${escapeHtml(app.id)}">Review</button>
+                    <button type="button" class="btn btn-sm btn-teal review-btn" data-id="${escapeHtml(app.id)}">${String(app.status || 'PENDING').toUpperCase() === 'APPROVED' ? 'Payments' : 'Review'}</button>
                 </div>
             </div>`;
         }).join('');
@@ -788,11 +823,182 @@
 
     function setReviewBusy(busy) {
         reviewBusy = busy;
-        ['approveBtn', 'rejectBtn', 'rejectConfirmBtn'].forEach(id => { document.getElementById(id).disabled = busy; });
+        ['rejectBtn', 'rejectConfirmBtn'].forEach(id => { document.getElementById(id).disabled = busy; });
+        updateDecision();
     }
+
+    // ---- per-document decisions ------------------------------------------
+    // Each document is approved or rejected on the server:
+    //   POST /api/clinics/applications/documents/{id}/approve/
+    //   POST /api/clinics/applications/documents/{id}/reject/   { rejection_reason }
+    // The detail response lists each document with review_status
+    // (PENDING | APPROVED | REJECTED) and rejection_reason. A rejected document does
+    // not reject the application: the applicant uploads a replacement and it goes
+    // back to PENDING. The application can only be approved once every document is
+    // approved, and the admin can still reject the whole application with a reason.
+    let reviewDocsList = [];
+    let reviewPending = false;
+    let docEditing = {};        // { [docId]: true } while the reject box is open
+    let docBusy = false;
+    let manualReject = false;
+
+    function docStatus(d) { return String(d.review_status || 'PENDING').toUpperCase(); }
+
+    function docTitle(d) {
+        const t = String(pick(d, ['document_type', 'type']) || 'Document').replace(/_/g, ' ').toLowerCase();
+        return t.replace(/^./, function (c) { return c.toUpperCase(); });
+    }
+
+    function drawDocs() {
+        const box = document.getElementById('reviewDocs');
+        if (!reviewDocsList.length) { box.innerHTML = '<div class="text-muted small">No documents returned.</div>'; return; }
+        box.innerHTML = reviewDocsList.map(d => {
+            const id = String(d.id);
+            const st = docStatus(d);
+            const badge = st === 'APPROVED' ? '<span class="doc-badge approved">Approved</span>'
+                : st === 'REJECTED' ? '<span class="doc-badge rejected">Rejected</span>'
+                : '<span class="doc-badge pending">Not reviewed</span>';
+            let actions = `<button type="button" class="btn btn-sm btn-outline-secondary doc-download" data-doc="${escapeHtml(id)}">Open</button>`;
+            if (reviewPending && !docEditing[id]) {
+                if (st === 'PENDING') {
+                    actions += `<button type="button" class="btn btn-sm btn-teal doc-approve" data-doc="${escapeHtml(id)}">Approve</button>` +
+                               `<button type="button" class="btn btn-sm btn-outline-danger doc-reject" data-doc="${escapeHtml(id)}">Reject</button>`;
+                } else if (st === 'APPROVED') {
+                    actions += `<button type="button" class="btn btn-sm btn-outline-danger doc-reject" data-doc="${escapeHtml(id)}">Reject</button>`;
+                }
+            }
+            let extra = '';
+            if (st === 'REJECTED') {
+                extra = `<div class="doc-reason">Reason: ${escapeHtml(d.rejection_reason || 'No reason recorded.')}<br><span class="text-muted">Waiting for the applicant to upload a replacement.</span></div>`;
+            }
+            if (docEditing[id]) {
+                extra = `<div class="mb-2">
+                    <textarea class="form-control mb-2" id="docReason-${escapeHtml(id)}" rows="2" maxlength="300" placeholder="Reason for rejecting this document (shown to the applicant)..."></textarea>
+                    <div class="text-danger small mb-1" id="docReasonErr-${escapeHtml(id)}" style="display:none;">Please give a reason for rejecting this document.</div>
+                    <button type="button" class="btn btn-sm btn-outline-danger doc-reject-confirm" data-doc="${escapeHtml(id)}">Confirm rejection</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary doc-reject-cancel" data-doc="${escapeHtml(id)}">Cancel</button>
+                </div>`;
+            }
+            return `<div class="doc-item">
+                <div class="review-doc">
+                    <div>
+                        <div style="font-weight:600;">${escapeHtml(docTitle(d))}${badge}</div>
+                        <div class="text-muted small">${escapeHtml(pick(d, ['file_name', 'filename', 'name']) || (d.uploaded_at ? 'Uploaded ' + new Date(d.uploaded_at).toLocaleString() : ''))}</div>
+                    </div>
+                    <div class="doc-actions">${actions}</div>
+                </div>${extra}</div>`;
+        }).join('');
+    }
+
+    // Shows the right buttons for the current document statuses.
+    function updateDecision() {
+        const approveBtn = document.getElementById('approveBtn');
+        const rejectBtn = document.getElementById('rejectBtn');
+        const confirmBtn = document.getElementById('rejectConfirmBtn');
+        const wrap = document.getElementById('rejectWrap');
+        const summary = document.getElementById('docSummary');
+        if (!reviewPending) {
+            [approveBtn, rejectBtn, confirmBtn].forEach(b => { b.style.display = 'none'; });
+            wrap.style.display = 'none';
+            summary.textContent = '';
+            return;
+        }
+        const total = reviewDocsList.length;
+        const approvedN = reviewDocsList.filter(d => docStatus(d) === 'APPROVED').length;
+        const rejectedN = reviewDocsList.filter(d => docStatus(d) === 'REJECTED').length;
+        const pendingN = total - approvedN - rejectedN;
+
+        if (rejectedN > 0) {
+            summary.style.color = '#721c24';
+            summary.textContent = rejectedN + (rejectedN === 1 ? ' document is' : ' documents are') + ' waiting for a replacement from the applicant. The application cannot be approved until every document is approved.';
+        } else if (pendingN > 0) {
+            summary.style.color = '#555';
+            summary.textContent = approvedN + ' of ' + total + ' documents approved. Approve or reject the remaining documents to continue.';
+        } else {
+            summary.style.color = '#155724';
+            summary.textContent = total ? 'All ' + total + ' documents are approved. The application can now be approved.' : '';
+        }
+
+        const canApprove = total > 0 && approvedN === total;
+        approveBtn.style.display = manualReject ? 'none' : 'block';
+        approveBtn.disabled = reviewBusy || docBusy || !canApprove;
+        approveBtn.title = canApprove ? '' : 'Every document must be approved first';
+        wrap.style.display = manualReject ? 'block' : 'none';
+        rejectBtn.style.display = manualReject ? 'none' : 'block';
+        confirmBtn.style.display = manualReject ? 'block' : 'none';
+    }
+
+    // Re-reads the application after a document decision so the screen shows what the server holds.
+    async function refreshReview() {
+        const id = reviewId;
+        try {
+            const response = await fetch(API_BASE_URL + '/api/clinics/applications/' + encodeURIComponent(id) + '/review/', { headers: authHeaders() });
+            const data = await readJson(response);
+            if (!response.ok) throw new Error('bad');
+            if (String(reviewId) !== String(id)) return;
+            renderReview((data && data.application) || data);
+        } catch (e) {
+            setReviewError('The decision was saved, but the list could not be refreshed. Close this window and open the application again.');
+        }
+    }
+
+    async function docAction(id, kind, body) {
+        docBusy = true;
+        setReviewError('');
+        updateDecision();
+        document.querySelectorAll('#reviewDocs button').forEach(b => { b.disabled = true; });
+        let response, data;
+        try {
+            response = await fetch(API_BASE_URL + '/api/clinics/applications/documents/' + encodeURIComponent(id) + '/' + kind + '/', {
+                method: 'POST', headers: authHeaders(), body: JSON.stringify(body || {})
+            });
+            data = await readJson(response);
+        } catch (e) {
+            docBusy = false;
+            setReviewError('Network error: the decision was not saved.');
+            drawDocs();
+            updateDecision();
+            return;
+        }
+        if (!response.ok) {
+            docBusy = false;
+            setReviewError(describeError(data, response.status));
+            drawDocs();
+            updateDecision();
+            return;
+        }
+        delete docEditing[id];
+        await refreshReview();
+        docBusy = false;
+        drawDocs();
+        updateDecision();
+        showNotice((data && data.message) || 'Document updated.');
+    }
+
+    document.getElementById('reviewDocs').addEventListener('click', function (e) {
+        const b = e.target.closest('button[data-doc]');
+        if (!b || !reviewPending || docBusy || b.classList.contains('doc-download')) return;
+        const id = b.getAttribute('data-doc');
+        if (b.classList.contains('doc-approve')) { docAction(id, 'approve'); return; }
+        if (b.classList.contains('doc-reject')) docEditing[id] = true;
+        else if (b.classList.contains('doc-reject-cancel')) delete docEditing[id];
+        else if (b.classList.contains('doc-reject-confirm')) {
+            const reason = document.getElementById('docReason-' + id).value.trim();
+            if (!reason) { document.getElementById('docReasonErr-' + id).style.display = 'block'; return; }
+            docAction(id, 'reject', { rejection_reason: reason });
+            return;
+        } else { return; }
+        drawDocs();
+        updateDecision();
+    });
 
     async function openReview(id) {
         reviewId = id;
+        reviewDocsList = [];
+        reviewPending = false;
+        docEditing = {};
+        docBusy = false;
+        manualReject = false;
         setReviewError('');
         setReviewBusy(false);
         document.getElementById('reviewBody').style.display = 'none';
@@ -843,25 +1049,111 @@
             ['Verification', bank.verification_status]
         ]);
 
+        renderPayments(app, bank);
+
         const docs = Array.isArray(app.documents) ? app.documents : [];
-        document.getElementById('reviewDocs').innerHTML = docs.length
-            ? docs.map(d => `
-                <div class="review-doc">
-                    <div>
-                        <div style="font-weight:600;">${escapeHtml(String(pick(d, ['document_type', 'type']) || 'Document').replace(/_/g, ' ').toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }))}</div>
-                        <div class="text-muted small">${escapeHtml(pick(d, ['file_name', 'filename', 'name']) || (d.uploaded_at ? 'Uploaded ' + new Date(d.uploaded_at).toLocaleString() : ''))}</div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary doc-download" data-doc="${escapeHtml(d.id)}">Open</button>
-                </div>`).join('')
-            : '<div class="text-muted small">No documents returned.</div>';
+        reviewDocsList = docs;
+        reviewPending = !app.status || String(app.status).toUpperCase() === 'PENDING';
+        drawDocs();
 
         document.getElementById('reviewLoading').style.display = 'none';
         document.getElementById('reviewBody').style.display = 'block';
 
-        const pending = !app.status || String(app.status).toUpperCase() === 'PENDING';
-        document.getElementById('approveBtn').style.display = pending ? 'block' : 'none';
-        document.getElementById('rejectBtn').style.display = pending ? 'block' : 'none';
+        updateDecision();
     }
+
+    // ---------------------------------------------------------
+    // PAYMENTS SETUP (approved applications only)
+    //   POST /api/clinics/bank-accounts/{id}/verify/
+    //        { paystack_bank_code, verification_notes, confirm_bank_details_verified: true }
+    //   POST /api/clinics/bank-accounts/{id}/create-subaccount/
+    // ---------------------------------------------------------
+    let payBankId = null;
+
+    function renderPayments(app, bank) {
+        const panel = document.getElementById('payPanel');
+        const approved = String(app.status || '').toUpperCase() === 'APPROVED';
+        panel.style.display = approved ? 'block' : 'none';
+        document.getElementById('payMsg').textContent = '';
+        if (!approved) return;
+
+        payBankId = bank.id != null ? bank.id : (bank.pk != null ? bank.pk : null);
+        const verified = String(bank.verification_status || '').toUpperCase() === 'VERIFIED';
+        const active = bank.paystack_subaccount_active === true;
+        const hasCode = !!bank.paystack_subaccount_code;
+        const status = document.getElementById('payStatus');
+        const verifyBox = document.getElementById('payVerifyBox');
+        const subBtn = document.getElementById('paySubBtn');
+        verifyBox.style.display = 'none';
+        subBtn.style.display = 'none';
+        subBtn.disabled = false;
+        document.getElementById('payVerifyBtn').disabled = false;
+
+        if (payBankId == null) {
+            status.style.color = '#721c24';
+            status.textContent = 'The server did not return this clinic\'s bank account id, so payments cannot be set up from here yet.';
+        } else if (active) {
+            status.style.color = '#155724';
+            status.textContent = 'Paystack subaccount is active. Payments for this clinic can be split.';
+        } else if (verified) {
+            status.style.color = '#555';
+            status.textContent = 'Bank details verified. Next, create the Paystack subaccount.' + (hasCode ? ' (A subaccount code already exists.)' : '');
+            subBtn.style.display = 'inline-block';
+        } else {
+            status.style.color = '#555';
+            status.textContent = 'Bank details not verified yet.';
+            verifyBox.style.display = 'block';
+            document.getElementById('payBankCode').value = bank.paystack_bank_code || '';
+            document.getElementById('payNotes').value = '';
+            document.getElementById('payConfirm').checked = false;
+        }
+    }
+
+    async function payPost(path, body, btn, doneText) {
+        const msg = document.getElementById('payMsg');
+        msg.style.color = '#555';
+        msg.textContent = 'Working...';
+        btn.disabled = true;
+        let response, data;
+        try {
+            const options = { method: 'POST', headers: authHeaders() };
+            if (body) options.body = JSON.stringify(body);
+            response = await fetch(API_BASE_URL + path, options);
+            data = await readJson(response);
+        } catch (e) {
+            msg.style.color = '#721c24';
+            msg.textContent = 'Network error: nothing was saved.';
+            btn.disabled = false;
+            return;
+        }
+        if (!response.ok) {
+            msg.style.color = '#721c24';
+            msg.textContent = describeError(data, response.status);
+            btn.disabled = false;
+            return;
+        }
+        const id = reviewId;
+        await openReview(id);
+        const after = document.getElementById('payMsg');
+        after.style.color = '#155724';
+        after.textContent = doneText;
+    }
+
+    document.getElementById('payVerifyBtn').addEventListener('click', function () {
+        const code = document.getElementById('payBankCode').value.trim();
+        const msg = document.getElementById('payMsg');
+        if (!code) { msg.style.color = '#721c24'; msg.textContent = 'Enter the Paystack bank code.'; return; }
+        if (!document.getElementById('payConfirm').checked) { msg.style.color = '#721c24'; msg.textContent = 'Tick the box to confirm you checked the bank details.'; return; }
+        payPost('/api/clinics/bank-accounts/' + encodeURIComponent(payBankId) + '/verify/', {
+            paystack_bank_code: code,
+            verification_notes: document.getElementById('payNotes').value.trim(),
+            confirm_bank_details_verified: true
+        }, this, 'Bank details verified.');
+    });
+
+    document.getElementById('paySubBtn').addEventListener('click', function () {
+        payPost('/api/clinics/bank-accounts/' + encodeURIComponent(payBankId) + '/create-subaccount/', null, this, 'Paystack subaccount created.');
+    });
 
     // Files need the Authorization header, so they are fetched as a blob
     // and opened in a new tab instead of linked directly.
@@ -932,10 +1224,8 @@
 
     document.getElementById('approveBtn').addEventListener('click', () => decide('approve'));
     document.getElementById('rejectBtn').addEventListener('click', function () {
-        document.getElementById('rejectWrap').style.display = 'block';
-        document.getElementById('rejectBtn').style.display = 'none';
-        document.getElementById('approveBtn').style.display = 'none';
-        document.getElementById('rejectConfirmBtn').style.display = 'block';
+        manualReject = true;
+        updateDecision();
         document.getElementById('rejectNotes').focus();
     });
     document.getElementById('rejectConfirmBtn').addEventListener('click', () => decide('reject'));

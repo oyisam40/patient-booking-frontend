@@ -1,0 +1,297 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recruitment - DOCONNECT</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body{min-height:100vh}
+.btn-teal{background:#1B9AAA;border-color:#1B9AAA;color:#fff}.btn-teal:hover:not(:disabled){background:#16808f;border-color:#16808f;color:#fff}.btn-teal:disabled{background:#1B9AAA;color:#fff;opacity:.6}
+.teal-link{color:#1B9AAA;text-decoration:none}.teal-link:hover{text-decoration:underline}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1B9AAA}
+.section-title{font-size:14px;font-weight:700;color:#1B9AAA;text-transform:uppercase;letter-spacing:.03em;margin:20px 0 10px}
+.err{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;border-radius:8px;padding:12px 16px;font-size:14px;margin-bottom:16px}
+.ok{background:#d4edda;color:#155724;border:1px solid #c3e6cb;border-radius:8px;padding:12px 16px;font-size:14px;margin-bottom:16px}
+.panel{display:none}.panel.active{display:block}
+.vac{border:1px solid #dee2e6;border-radius:10px;padding:14px 16px;margin-bottom:12px;cursor:pointer;background:#fff}
+.vac:hover{border-color:#1B9AAA}
+.badge-cat{background:#e3f6f8;color:#16808f;font-weight:600}
+.pre{white-space:pre-wrap}
+
+.nav-tabs .nav-link{color:#16808f}.nav-tabs .nav-link.active{color:#000;font-weight:600}
+.st{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#e9ecef;color:#495057}
+.st.SUBMITTED,.st.UNDER_REVIEW{background:#e3f6f8;color:#16808f}.st.SHORTLISTED,.st.SCHEDULED{background:#fff3cd;color:#856404}
+.st.ACCEPTED,.st.PUBLISHED,.st.COMPLETED{background:#d4edda;color:#155724}.st.REJECTED,.st.CLOSED,.st.CANCELLED,.st.NO_SHOW,.st.WITHDRAWN{background:#f8d7da;color:#721c24}
+dialog{border:0;border-radius:12px;padding:20px;max-width:520px;width:92%;box-shadow:0 1rem 3rem rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.sub{border-top:1px dashed #dee2e6;margin-top:10px;padding-top:10px;font-size:14px}
+</style>
+<script src="{% static 'js/slideshow.js' %}"
+        data-slides="{% static 'images/alterfines-medicine-2361046_1920.jpg' %},{% static 'images/hero-2.jpg' %},{% static 'images/hero-3.jpg' %},{% static 'images/hero-4.jpg' %}"></script>
+<script src="{% static 'js/config.js' %}"></script>
+<script src="{% static 'js/clinic_context.js' %}"></script>
+</head>
+<body>
+<div class="d-flex justify-content-center align-items-start" style="min-height:100vh;padding:2rem 0;">
+<div class="card" style="max-width:940px;width:100%;margin:1rem;box-shadow:0 1rem 3rem rgba(0,0,0,.25);">
+<div class="card-body p-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+    <div><div class="eyebrow">Recruitment</div><h1 class="h3 mb-0">Vacancies and applications</h1></div>
+    <div class="d-flex gap-2 align-items-center"><select id="clinicSelect" class="form-select form-select-sm" style="display:none;min-width:200px"></select>
+    <a class="teal-link small" href="/clinic-dashboard/">Dashboard</a></div>
+  </div>
+  <div id="flash"></div>
+  <ul class="nav nav-tabs mb-3" id="tabs">
+    <li class="nav-item"><a class="nav-link active" href="#" data-tab="vac">Vacancies</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" data-tab="app">Applications</a></li>
+  </ul>
+
+  <div class="panel active" id="tab-vac">
+    <div class="d-flex justify-content-between align-items-center"><div class="section-title" id="formTitle" style="margin:0">New vacancy</div>
+      <button class="btn btn-sm btn-outline-secondary" id="cancelEdit" style="display:none">Cancel edit</button></div>
+    <form id="vacForm" novalidate class="mt-2">
+      <div class="row g-3">
+        <div class="col-md-8"><label class="form-label">Title</label><input class="form-control" id="title"></div>
+        <div class="col-md-4"><label class="form-label">Staff category</label>
+          <select class="form-select" id="cat"><option value="CLINICAL">Clinical</option><option value="NON_CLINICAL">Non-clinical</option><option value="ADMINISTRATION">Administration</option><option value="TECHNICAL">Technical</option><option value="OTHER">Other</option></select></div>
+        <div class="col-md-6"><label class="form-label">Role given when someone is accepted</label>
+          <select class="form-select" id="mrole"><option value="STAFF">Staff</option><option value="DOCTOR">Doctor</option><option value="HR">HR</option></select>
+          <div class="form-text">The accepted applicant becomes a clinic member with this role automatically.</div></div>
+        <div class="col-12"><label class="form-label">Description</label><textarea class="form-control" id="desc" rows="3"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Requirements</label><textarea class="form-control" id="req" rows="3"></textarea></div>
+        <div class="col-md-6"><label class="form-label">Qualifications</label><textarea class="form-control" id="qual" rows="3"></textarea></div>
+        <div class="col-12"><label class="form-label">Experience required</label><textarea class="form-control" id="exp" rows="2"></textarea></div>
+        <div class="col-md-4"><label class="form-label">Employment type</label><select class="form-select" id="emp"><option value="FULL_TIME">Full-time</option><option value="PART_TIME">Part-time</option><option value="CONTRACT">Contract</option><option value="TEMPORARY">Temporary</option><option value="INTERNSHIP">Internship</option></select></div>
+        <div class="col-md-8"><label class="form-label">Location</label><input class="form-control" id="loc"></div>
+        <div class="col-md-4"><label class="form-label">Salary from (optional)</label><input type="number" min="0" step="0.01" class="form-control" id="smin"></div>
+        <div class="col-md-4"><label class="form-label">Salary to (optional)</label><input type="number" min="0" step="0.01" class="form-control" id="smax"></div>
+        <div class="col-md-4"><label class="form-label">Closing date</label><input type="date" class="form-control" id="close"></div>
+      </div>
+      <button class="btn btn-teal mt-3" id="saveBtn" type="submit">Create vacancy</button>
+    </form>
+    <div class="section-title">This clinic's vacancies</div>
+    <div id="vacList"><p class="text-muted">Loading...</p></div>
+  </div>
+
+  <div class="panel" id="tab-app">
+    <div class="row g-2 mb-3">
+      <div class="col-md-6"><select class="form-select" id="fVac"><option value="">All vacancies</option></select></div>
+      <div class="col-md-4"><select class="form-select" id="fStatus"><option value="">All statuses</option>
+        <option>SUBMITTED</option><option>UNDER_REVIEW</option><option>SHORTLISTED</option><option>ACCEPTED</option><option>REJECTED</option><option>WITHDRAWN</option></select></div>
+      <div class="col-md-2"><button class="btn btn-teal w-100" id="fGo">Filter</button></div>
+    </div>
+    <div id="appList"><p class="text-muted">Loading...</p></div>
+  </div>
+  <p class="small text-muted mt-3 mb-0">Statuses come from the server, which decides which steps are allowed.</p>
+</div></div></div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"><h2 class="h5" id="dlgTitle"></h2><div id="dlgBody"></div>
+  <div class="d-flex justify-content-end gap-2 mt-3"><button type="button" class="btn btn-outline-secondary" id="dlgCancel">Cancel</button><button type="submit" class="btn btn-teal" id="dlgOk">Confirm</button></div></form></dialog>
+
+<script>
+// Endpoints (from the recruitment API doc):
+//  GET/POST /api/recruitment/clinics/{id}/vacancies/    PATCH .../vacancies/{id}/edit/
+//  POST .../vacancies/{id}/publish/ | close/
+//  GET /api/recruitment/clinics/{id}/applications/?vacancy=&status=
+//  PATCH /api/recruitment/applications/{id}/review/ {status, review_notes}
+//  GET/POST /api/recruitment/applications/{id}/interviews/   PATCH /api/recruitment/interviews/{id}/
+const token = localStorage.getItem('accessToken');
+if (!token) location.href = '/';
+let clinicId = null, vacancies = [], editingId = null;
+const $ = id => document.getElementById(id);
+const R = p => API_BASE_URL + '/api/recruitment' + p;
+const H = j => Object.assign({ 'Authorization': 'Bearer ' + token }, j ? { 'Content-Type': 'application/json' } : {});
+function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+function msg(d){ if (!d) return 'Something went wrong.'; if (typeof d === 'string') return d; if (d.detail) return d.detail;
+  return Object.entries(d).map(([k,v]) => k + ': ' + (Array.isArray(v) ? v.join(' ') : (typeof v === 'object' ? JSON.stringify(v) : v))).join(' | '); }
+function flash(t, ok){ $('flash').innerHTML = t ? '<div class="' + (ok ? 'ok' : 'err') + '">' + esc(t) + '</div>' : ''; }
+async function api(method, url, body){
+  const r = await fetch(R(url), { method, headers: H(body !== undefined), body: body !== undefined ? JSON.stringify(body) : undefined });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(msg(d)); e.status = r.status; throw e; }
+  return d;
+}
+const asList = d => Array.isArray(d) ? d : (d.results || d.vacancies || d.applications || d.interviews || []);
+
+/* ---- dialog ---- */
+function ask(title, bodyHtml){
+  return new Promise(res => {
+    $('dlgTitle').textContent = title; $('dlgBody').innerHTML = bodyHtml;
+    const dlg = $('dlg'); let done = false;
+    const fin = v => { if (done) return; done = true; dlg.close(); res(v); };
+    $('dlgForm').onsubmit = e => { e.preventDefault(); const o = {}; dlg.querySelectorAll('[name]').forEach(el => o[el.name] = el.value); fin(o); };
+    $('dlgCancel').onclick = () => fin(null); dlg.oncancel = () => fin(null);
+    dlg.showModal();
+  });
+}
+
+/* ---- tabs ---- */
+document.getElementById('tabs').addEventListener('click', e => {
+  const a = e.target.closest('[data-tab]'); if (!a) return; e.preventDefault();
+  document.querySelectorAll('#tabs .nav-link').forEach(x => x.classList.toggle('active', x === a));
+  ['vac','app'].forEach(t => $('tab-' + t).classList.toggle('active', t === a.dataset.tab));
+  if (a.dataset.tab === 'app') loadApps();
+});
+
+/* ---- vacancies ---- */
+async function loadVacancies(){
+  $('vacList').innerHTML = '<p class="text-muted">Loading...</p>';
+  try {
+    vacancies = asList(await api('GET', '/clinics/' + clinicId + '/vacancies/'));
+    $('fVac').innerHTML = '<option value="">All vacancies</option>' + vacancies.map(v => '<option value="' + v.id + '">' + esc(v.title) + '</option>').join('');
+    $('vacList').innerHTML = vacancies.length ? vacancies.map(v => '<div class="vac d-flex justify-content-between align-items-center flex-wrap gap-2" style="cursor:default"><div><strong>' + esc(v.title) +
+      '</strong> <span class="st ' + esc(v.status) + '">' + esc(v.status) + '</span><div class="small text-muted">' + esc(v.staff_category || '') + (v.clinic_membership_role ? ' &middot; joins as ' + esc(v.clinic_membership_role) : '') + (v.closing_date ? ' &middot; closes ' + esc(v.closing_date) : '') + '</div></div><div class="d-flex gap-2">' +
+      (v.status !== 'CLOSED' ? '<button class="btn btn-sm btn-outline-secondary" data-edit="' + v.id + '">Edit</button>' : '') +
+      (v.status === 'DRAFT' ? '<button class="btn btn-sm btn-teal" data-act="publish" data-id="' + v.id + '">Publish</button>' : '') +
+      (v.status === 'PUBLISHED' ? '<button class="btn btn-sm btn-outline-danger" data-act="close" data-id="' + v.id + '">Close</button>' : '') +
+      '</div></div>').join('') : '<p class="text-muted">No vacancies yet.</p>';
+  } catch (e) { $('vacList').innerHTML = ''; flash('Could not load vacancies. ' + e.message); }
+}
+function resetForm(){ editingId = null; $('vacForm').reset(); $('formTitle').textContent = 'New vacancy'; $('saveBtn').textContent = 'Create vacancy'; $('cancelEdit').style.display = 'none'; }
+$('cancelEdit').addEventListener('click', e => { e.preventDefault(); resetForm(); });
+$('vacList').addEventListener('click', async e => {
+  const ed = e.target.closest('[data-edit]');
+  if (ed) { const v = vacancies.find(x => String(x.id) === ed.dataset.edit); if (!v) return; editingId = v.id;
+    $('title').value = v.title || ''; $('cat').value = v.staff_category || 'CLINICAL'; $('mrole').value = v.clinic_membership_role || 'STAFF'; $('desc').value = v.description || ''; $('req').value = v.requirements || '';
+    $('qual').value = v.qualifications || ''; $('exp').value = v.experience_required || ''; $('emp').value = v.employment_type || 'FULL_TIME'; $('smin').value = v.salary_min || ''; $('smax').value = v.salary_max || ''; $('loc').value = v.location || ''; $('close').value = v.closing_date || '';
+    $('formTitle').textContent = 'Edit vacancy'; $('saveBtn').textContent = 'Save changes'; $('cancelEdit').style.display = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  const b = e.target.closest('[data-act]'); if (!b) return; b.disabled = true;
+  try { const d = await api('POST', '/vacancies/' + b.dataset.id + '/' + b.dataset.act + '/'); flash(d.detail, true); loadVacancies(); }
+  catch (err) { flash(err.message); b.disabled = false; }
+});
+$('vacForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const body = { title: $('title').value.trim(), staff_category: $('cat').value, clinic_membership_role: $('mrole').value, description: $('desc').value.trim(),
+    requirements: $('req').value.trim(), qualifications: $('qual').value.trim(), experience_required: $('exp').value.trim(), employment_type: $('emp').value,
+    location: $('loc').value.trim(), salary_min: $('smin').value || null, salary_max: $('smax').value || null, closing_date: $('close').value || null };
+  if (!body.title || !body.description) { flash('Title and description are required.'); return; }
+  $('saveBtn').disabled = true;
+  try {
+    if (editingId) { await api('PATCH', '/vacancies/' + editingId + '/edit/', body); flash('Vacancy updated.', true); }
+    else { await api('POST', '/clinics/' + clinicId + '/vacancies/', body); flash('Draft vacancy created. Publish it when ready.', true); }
+    resetForm(); loadVacancies();
+  } catch (err) { flash(err.message); } finally { $('saveBtn').disabled = false; }
+});
+
+/* ---- applications ---- */
+const NEXT = {
+  SUBMITTED: [['UNDER_REVIEW','Start review','btn-outline-secondary'], ['SHORTLISTED','Shortlist','btn-teal'], ['REJECTED','Reject','btn-outline-danger']],
+  UNDER_REVIEW: [['SHORTLISTED','Shortlist','btn-teal'], ['REJECTED','Reject','btn-outline-danger']],
+  SHORTLISTED: [['SCHEDULE','Schedule interview','btn-teal'], ['ACCEPTED','Accept','btn-outline-secondary'], ['REJECTED','Reject','btn-outline-danger']]
+};
+function cvUrl(p){ return !p ? '' : (/^https?:/.test(p) ? p : API_BASE_URL + p); }
+async function loadApps(){
+  $('appList').innerHTML = '<p class="text-muted">Loading...</p>';
+  const q = new URLSearchParams(); if ($('fVac').value) q.set('vacancy', $('fVac').value); if ($('fStatus').value) q.set('status', $('fStatus').value);
+  try {
+    const items = asList(await api('GET', '/clinics/' + clinicId + '/applications/' + (q.toString() ? '?' + q : ''))); lastApps = items;
+    $('appList').innerHTML = items.length ? items.map(a => '<div class="vac" style="cursor:default" data-app="' + a.id + '"><div class="d-flex justify-content-between align-items-start flex-wrap gap-2"><div><strong>' +
+      esc(a.applicant_name) + '</strong> <span class="st ' + esc(a.status) + '">' + esc(a.status) + '</span><div class="small text-muted">' + esc(a.applicant_email) + ' &middot; ' + esc(a.vacancy_title) + '</div></div><div class="d-flex gap-2 flex-wrap">' +
+      (a.cv ? '<a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="' + esc(cvUrl(a.cv)) + '">View CV</a>' : '') +
+      (NEXT[a.status] || []).map(n => '<button class="btn btn-sm ' + n[2] + '" data-do="' + n[0] + '" data-id="' + a.id + '">' + n[1] + '</button>').join('') +
+      '<button class="btn btn-sm btn-outline-secondary" data-int="' + a.id + '">Interviews</button></div></div>' +
+      (a.cover_letter ? '<div class="sub"><strong>Cover letter:</strong> <span class="pre">' + esc(a.cover_letter) + '</span></div>' : '') +
+      (a.review_notes ? '<div class="sub"><strong>Review notes:</strong> ' + esc(a.review_notes) + '</div>' : '') +
+      '<div class="sub" id="int-' + a.id + '" style="display:none"></div></div>').join('') : '<p class="text-muted">No applications match.</p>';
+  } catch (e) { $('appList').innerHTML = ''; flash('Could not load applications. ' + e.message); }
+}
+$('fGo').addEventListener('click', loadApps);
+
+async function review(id, status){
+  const o = await ask(({REJECTED:'Reject application',ACCEPTED:'Accept candidate',SHORTLISTED:'Shortlist candidate',UNDER_REVIEW:'Start review'})[status],
+    '<label class="form-label">Notes for the applicant' + (status === 'REJECTED' ? ' (required)' : '') + '</label><textarea class="form-control" name="notes" rows="3"></textarea>');
+  if (!o) return;
+  if (status === 'REJECTED' && !o.notes.trim()) { flash('Please add a reason for rejecting.'); return; }
+  try { await api('PATCH', '/applications/' + id + '/review/', { status, review_notes: o.notes.trim() }); flash(status === 'ACCEPTED' ? 'Accepted. They are now a clinic member and appear under Doctors & Staff.' : 'Application updated.', true); loadApps(); }
+  catch (e) { flash(e.message); }
+}
+let lastApps = [];
+// The logged-in manager's own user id, read from the login token.
+function myUserId(){
+  try {
+    const t = localStorage.getItem('accessToken');
+    const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return p.user_id != null ? p.user_id : (p.sub != null ? p.sub : null);
+  } catch (e) { return null; }
+}
+const ROLE_LABEL = { DOCTOR: 'Doctor', ADMIN: 'Admin', SYSTEM_ADMIN: 'System admin', HR: 'HR' };
+// People who can interview: active clinic members who are doctors, admins or HR.
+// The list comes from the clinic's members; the logged-in manager is listed first.
+async function interviewerOptions(applicantId){
+  let list = [];
+  try {
+    const r = await fetch(API_BASE_URL + '/api/clinics/' + clinicId + '/members/', { headers: H(false) });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) list = d.members || d.results || (Array.isArray(d) ? d : []);
+  } catch (e) { /* fall back to the logged-in manager only */ }
+  const me = myUserId(), seen = new Set(), opts = [];
+  list.filter(m => m.is_active !== false && ROLE_LABEL[String(m.role).toUpperCase()]).forEach(m => {
+    const uid = m.user_id != null ? m.user_id : (m.user && typeof m.user === 'object' ? m.user.id : m.user);
+    if (uid == null || seen.has(String(uid)) || String(uid) === String(applicantId)) return;
+    seen.add(String(uid));
+    opts.push({ id: uid, label: (m.user_name || m.user_email || ('User ' + uid)) + ' (' + ROLE_LABEL[String(m.role).toUpperCase()] + ')' + (String(uid) === String(me) ? ' - you' : '') });
+  });
+  if (me != null && !seen.has(String(me)) && String(me) !== String(applicantId)) opts.unshift({ id: me, label: 'Me' });
+  opts.sort((a, b) => (String(b.id) === String(me)) - (String(a.id) === String(me)));
+  return opts;
+}
+async function schedule(id){
+  const app = lastApps.find(x => String(x.id) === String(id));
+  const opts = await interviewerOptions(app ? app.applicant : null);
+  const ivField = opts.length
+    ? '<label class="form-label">Interviewer</label><select class="form-select" name="iv">' + opts.map(o => '<option value="' + esc(o.id) + '">' + esc(o.label) + '</option>').join('') + '</select>'
+    : '<label class="form-label">Interviewer user ID</label><input class="form-control" name="iv" type="number"><div class="form-text">The team list could not be loaded.</div>';
+  const o = await ask('Schedule interview',
+    '<div class="row g-2"><div class="col-6"><label class="form-label">Round</label><input class="form-control" name="round" type="number" min="1" value="1"></div>' +
+    '<div class="col-6"><label class="form-label">Minutes</label><input class="form-control" name="dur" type="number" min="5" value="30"></div>' +
+    '<div class="col-12"><label class="form-label">Date and time</label><input class="form-control" name="when" type="datetime-local"></div>' +
+    '<div class="col-6"><label class="form-label">Method</label><select class="form-select" name="method"><option value="ONLINE">Online</option><option value="IN_PERSON">In person</option><option value="PHONE">Telephone</option></select></div>' +
+    '<div class="col-6">' + ivField + '</div>' +
+    '<div class="col-12"><label class="form-label">Meeting link (required for online)</label><input class="form-control" name="link" placeholder="https://"></div>' +
+    '<div class="col-12"><label class="form-label">Location (required for in person)</label><input class="form-control" name="loc"></div></div>');
+  if (!o) return;
+  if (!o.when || !o.iv) { flash('Date/time and interviewer are required.'); return; }
+  const body = { round_number: +o.round, scheduled_at: new Date(o.when).toISOString(), duration_minutes: +o.dur, method: o.method, interviewer: +o.iv, status: 'SCHEDULED', outcome: 'PENDING' };
+  if (o.method === 'ONLINE' && !o.link.trim()) { flash('A meeting link is required for an online interview.'); return; }
+  if (o.method === 'IN_PERSON' && !o.loc.trim()) { flash('A location is required for an in-person interview.'); return; }
+  if (new Date(o.when) <= new Date()) { flash('Choose a future date and time.'); return; }
+  if (o.link.trim()) body.meeting_link = o.link.trim();
+  if (o.loc.trim()) body.location = o.loc.trim();
+  try { await api('POST', '/applications/' + id + '/interviews/', body); flash('Interview scheduled.', true); loadApps(); }
+  catch (e) { flash(e.message); }
+}
+async function showInterviews(id){
+  const box = $('int-' + id); box.style.display = box.style.display === 'none' ? 'block' : 'none'; if (box.style.display === 'none') return;
+  box.innerHTML = 'Loading...';
+  try {
+    const items = asList(await api('GET', '/applications/' + id + '/interviews/'));
+    box.innerHTML = items.length ? items.map(i => '<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2"><div>Round ' + esc(i.round_number) + ' &middot; ' + esc(new Date(i.scheduled_at).toLocaleString()) +
+      ' &middot; ' + esc(i.method) + (i.interviewer_name ? ' &middot; ' + esc(i.interviewer_name) : '') + (i.location ? ' &middot; ' + esc(i.location) : '') + ' <span class="st ' + esc(i.status) + '">' + esc(i.status) + '</span> ' + (i.outcome && i.outcome !== 'PENDING' ? '<span class="st">' + esc(i.outcome) + '</span>' : '') + '</div>' +
+      (i.status === 'SCHEDULED' ? '<div class="d-flex gap-1"><button class="btn btn-sm btn-teal" data-iact="PASS" data-iid="' + i.id + '">Passed</button><button class="btn btn-sm btn-outline-danger" data-iact="FAIL" data-iid="' + i.id + '">Failed</button>' +
+      '<button class="btn btn-sm btn-outline-secondary" data-iact="CANCELLED" data-iid="' + i.id + '">Cancel</button><button class="btn btn-sm btn-outline-secondary" data-iact="NO_SHOW" data-iid="' + i.id + '">No-show</button></div>' : '') + '</div>').join('') : 'No interviews yet.';
+  } catch (e) { box.textContent = 'Could not load interviews. ' + e.message; }
+}
+async function interviewAct(iid, act){
+  let body = { status: act };
+  if (act === 'PASS' || act === 'FAIL') {
+    const o = await ask(act === 'PASS' ? 'Record: passed' : 'Record: did not pass', '<label class="form-label">Assessment notes (optional)</label><textarea class="form-control" name="n" rows="3"></textarea>');
+    if (!o) return; body = { status: 'COMPLETED', outcome: act }; if (o.n.trim()) body.assessment_notes = o.n.trim();
+  }
+  try { await api('PATCH', '/interviews/' + iid + '/', body); flash('Interview updated.', true); loadApps(); }
+  catch (e) { flash(e.message); }
+}
+$('appList').addEventListener('click', e => {
+  const d = e.target.closest('[data-do]'); if (d) { d.dataset.do === 'SCHEDULE' ? schedule(d.dataset.id) : review(d.dataset.id, d.dataset.do); return; }
+  const i = e.target.closest('[data-int]'); if (i) { showInterviews(i.dataset.int); return; }
+  const a = e.target.closest('[data-iact]'); if (a) interviewAct(a.dataset.iid, a.dataset.iact);
+});
+
+ClinicContext.init({
+  selectId: 'clinicSelect',
+  onSelect: id => { clinicId = id; flash(''); resetForm(); loadVacancies(); if ($('tab-app').classList.contains('active')) loadApps(); },
+  onError: r => flash(r === 403 ? 'You do not have access to recruitment.' : (r === 'none' ? 'No clinic found for your account.' : 'Could not load your clinics.'))
+});
+</script>
+</body></html>

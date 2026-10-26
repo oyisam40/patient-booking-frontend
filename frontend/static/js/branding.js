@@ -9,7 +9,7 @@
  * - Puts the logo in front of the "DOCONNECT" text in the top bar.
  * - Puts the landing-page background (teal overlay + photo) behind the page.
  * - Adds a round profile picture on the right of the top bar. It shows the
- *   logo until the user chooses a photo; clicking it opens a small menu to
+ *   icon.jpg (or the logo if that file is missing) until the user chooses a photo; clicking it opens a small menu to
  *   change or remove the photo.
  *
  * WHERE THE PHOTO IS KEPT: there is no profile-picture endpoint on the backend
@@ -27,6 +27,10 @@
     var script = document.currentScript;
     var logoUrl = script ? script.getAttribute('data-logo') : '';
     var bgUrl = script ? script.getAttribute('data-bg') : '';
+    // Default profile picture: images/icon.jpg (next to the logo). Falls back to the logo
+    // if that file is missing. Override with data-avatar="..." on the script tag.
+    var defaultAvatar = (script && script.getAttribute('data-avatar')) ||
+        (logoUrl ? logoUrl.replace(/[^\/]+$/, 'icon.jpg') : '');
 
     // ---- background ----------------------------------------------------
     if (bgUrl) {
@@ -101,7 +105,8 @@
         function current() { return storage(function (s) { return s.getItem(key); }); }
         function show() {
             var saved = current();
-            avatar.src = saved || logoUrl || '';
+            avatar.onerror = function () { avatar.onerror = null; if (logoUrl) avatar.src = logoUrl; };
+            avatar.src = saved || defaultAvatar || logoUrl || '';
             wrap.querySelector('[data-act=remove]').style.display = saved ? 'block' : 'none';
         }
         function say(text) { msg.textContent = text || ''; msg.style.display = text ? 'block' : 'none'; }

@@ -372,14 +372,27 @@
             // If the backend signs the applicant in on verification, keep that token for the documents step.
             var out = res.data || {};
             var access = out.access || out.access_token || (out.tokens && out.tokens.access);
+            var refresh = out.refresh || out.refresh_token || (out.tokens && out.tokens.refresh);
+            var userRole = out.user && out.user.role;
             if (!access && state.username && state.password) {
-                // The documents step needs the applicant's JWT; sign in with the details just entered.
-                // Kept in sessionStorage only, so the rest of the site does not treat them as signed in.
+                // Sign the applicant in with the details just entered, so they land in their
+                // account (documents page, clinic tools locked until approval).
                 var login = await sendJson('/api/auth/login/', { username_or_email: state.username, password: state.password });
-                if (login.ok && login.data) access = login.data.access;
+                if (login.ok && login.data) {
+                    access = login.data.access;
+                    refresh = login.data.refresh;
+                    userRole = login.data.user && login.data.user.role;
+                }
             }
             state.password = '';
-            if (access) { try { sessionStorage.setItem('onboardingToken', access); } catch (err) { /* ignore */ } }
+            if (access) {
+                try {
+                    localStorage.setItem('accessToken', access);
+                    if (refresh) localStorage.setItem('refreshToken', refresh);
+                    if (userRole) localStorage.setItem('userRole', userRole);
+                    sessionStorage.setItem('onboardingToken', access);
+                } catch (err) { /* ignore */ }
+            }
             window.location.href = '/clinic-documents/?application=' + encodeURIComponent(state.applicationId);
         });
 
