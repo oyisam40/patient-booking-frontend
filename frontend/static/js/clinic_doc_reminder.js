@@ -181,11 +181,22 @@
         return out.join(' ');
     }
 
+    // The download endpoint sends a generic binary type and the stored names have no extension,
+    // so the browser would save the file. Work out the real type from the first bytes instead.
+    async function typedBlob(blob) {
+        var b = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+        var type = blob.type;
+        if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46) type = 'application/pdf';
+        else if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) type = 'image/jpeg';
+        else if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) type = 'image/png';
+        return new Blob([blob], { type: type });
+    }
+
     async function openFile(url, win) {
         try {
             var response = await fetch(abs(url), { headers: authHeaders() });
             if (!response.ok) throw new Error('status ' + response.status);
-            var blob = await response.blob();
+            var blob = await typedBlob(await response.blob());
             win.location = URL.createObjectURL(blob);
         } catch (e) {
             win.close();

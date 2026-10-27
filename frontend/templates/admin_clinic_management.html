@@ -838,6 +838,7 @@
     // approved, and the admin can still reject the whole application with a reason.
     let reviewDocsList = [];
     let reviewPending = false;
+    let docsEditable = false;   // documents can be reviewed while the application is PENDING or APPROVED
     let docEditing = {};        // { [docId]: true } while the reject box is open
     let docBusy = false;
     let manualReject = false;
@@ -859,7 +860,7 @@
                 : st === 'REJECTED' ? '<span class="doc-badge rejected">Rejected</span>'
                 : '<span class="doc-badge pending">Not reviewed</span>';
             let actions = `<button type="button" class="btn btn-sm btn-outline-secondary doc-download" data-doc="${escapeHtml(id)}">Open</button>`;
-            if (reviewPending && !docEditing[id]) {
+            if (docsEditable && !docEditing[id]) {
                 if (st === 'PENDING') {
                     actions += `<button type="button" class="btn btn-sm btn-teal doc-approve" data-doc="${escapeHtml(id)}">Approve</button>` +
                                `<button type="button" class="btn btn-sm btn-outline-danger doc-reject" data-doc="${escapeHtml(id)}">Reject</button>`;
@@ -977,7 +978,7 @@
 
     document.getElementById('reviewDocs').addEventListener('click', function (e) {
         const b = e.target.closest('button[data-doc]');
-        if (!b || !reviewPending || docBusy || b.classList.contains('doc-download')) return;
+        if (!b || !docsEditable || docBusy || b.classList.contains('doc-download')) return;
         const id = b.getAttribute('data-doc');
         if (b.classList.contains('doc-approve')) { docAction(id, 'approve'); return; }
         if (b.classList.contains('doc-reject')) docEditing[id] = true;
@@ -996,6 +997,7 @@
         reviewId = id;
         reviewDocsList = [];
         reviewPending = false;
+        docsEditable = false;
         docEditing = {};
         docBusy = false;
         manualReject = false;
@@ -1054,6 +1056,7 @@
         const docs = Array.isArray(app.documents) ? app.documents : [];
         reviewDocsList = docs;
         reviewPending = !app.status || String(app.status).toUpperCase() === 'PENDING';
+        docsEditable = reviewPending || String(app.status).toUpperCase() === 'APPROVED';
         drawDocs();
 
         document.getElementById('reviewLoading').style.display = 'none';
