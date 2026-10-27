@@ -145,6 +145,7 @@
                     <div class="text-start mx-auto" style="max-width: 460px;" id="statusNotes"></div>
                     <div class="alert alert-success text-start mx-auto" style="max-width: 520px; display:none;" id="statusNotice" role="status"></div>
                     <div class="text-start mx-auto mt-3" style="max-width: 520px;" id="statusDocs"></div>
+                    <div class="text-start mx-auto mt-3" style="max-width: 520px;" id="statusMissing"></div>
                     <div class="mx-auto mt-3" style="max-width: 520px;">
                         <div class="login-error text-start" id="resubmitError" style="display:none;"></div>
                         <button type="button" class="btn btn-teal" id="resubmitBtn" style="display:none;">Resubmit application</button>
@@ -187,6 +188,9 @@
         // application is REJECTED (Ntsako agreed to this; his resubmit commit does not include it yet).
         // While false, a rejected application shows Resubmit first, and replace pickers appear once it is reopened.
         var REPLACE_WHILE_REJECTED = true;
+        // true: an approved clinic admin gets a picker on every document. The backend only allows replacing
+        // a document that was rejected, so this stays false: pickers appear on rejected documents only.
+        var APPROVED_CAN_REPLACE = false;
         var MAX_MB = 5;
         var ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
 
@@ -379,6 +383,14 @@
             return DOC_TITLES[t] || t.replace(/_/g, ' ').toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }) || 'Document';
         }
 
+        // Link to the uploaded file, when the backend sends one (file_url on each document).
+        function docUrl(d) {
+            var u = d.file_url || d.file || d.document_url || '';
+            if (!u) return '';
+            if (/^https?:/i.test(u)) return u;
+            return API_BASE_URL + (u.charAt(0) === '/' ? u : '/' + u);
+        }
+
         function drawStatusDocs(app, allowReplace) {
             var docs = app.documents || app.supporting_documents || [];
             var box = $('statusDocs');
@@ -391,7 +403,7 @@
                 var extra = '';
                 // allowReplace === 'all': a rejected application (the backend keeps it REJECTED while documents are replaced).
                 // allowReplace === 'open': a reopened application. In both modes only documents that are not approved can be replaced.
-                var canReplace = (allowReplace === 'all' || allowReplace === 'open') ? st !== 'APPROVED' : (allowReplace && st === 'REJECTED');   // approved documents never get a picker
+                var canReplace = allowReplace === 'every' ? true : (allowReplace === 'all' || allowReplace === 'open') ? st !== 'APPROVED' : (allowReplace && st === 'REJECTED');   // approved documents never get a picker
                 if (st === 'REJECTED') {
                     extra = '<div class="doc-reason"><strong>Reason:</strong> ' + escapeHtml(d.rejection_reason || 'No reason was given.') + '</div>';
                 }
@@ -399,11 +411,16 @@
                     extra += '<div class="mt-2">' +
                         '<input type="file" class="form-control form-control-sm replace-file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">' +
                         '<div class="field-error replace-error" style="display:none;"></div>' +
-                        '<button type="button" class="btn btn-sm btn-teal mt-2 replace-btn" data-doc="' + escapeHtml(d.id) + '">' +
+                        '<button type="button" class="btn btn-sm btn-teal mt-2 replace-btn" data-doc="' + escapeHtml(d.id) + '" data-url="' + escapeHtml(d.replace_url || '') + '">' +
                         (st === 'REJECTED' ? 'Upload replacement' : 'Replace this document') + '</button></div>';
                 }
+                var url = docUrl(d);
+                var view = url ? '<div class="mt-1"><a class="teal-link small view-doc" href="#" data-url="' + escapeHtml(url) + '">View uploaded file</a></div>' : '';
+                if (canReplace && allowReplace === 'every' && st === 'APPROVED') {
+                    extra = '<div class="small text-muted mt-2">Choose a new file only if this document needs updating.</div>' + extra;
+                }
                 return '<div class="doc-row"><div class="d-flex justify-content-between align-items-center gap-2">' +
-                    '<div style="font-weight:600;">' + escapeHtml(docTitle(d)) + '</div>' + badge + '</div>' + extra + '</div>';
+                    '<div style="font-weight:600;">' + escapeHtml(docTitle(d)) + '</div>' + badge + '</div>' + view + extra + '</div>';
             }).join('');
         }
 
@@ -464,7 +481,10 @@
             btn.textContent = 'Uploading...';
             var form = new FormData();
             form.append('file', file);
-            fetch(API_BASE_URL + '/api/clinics/applications/documents/' + encodeURIComponent(btn.getAttribute('data-doc')) + '/replace/', {
+            var replaceUrl = btn.getAttribute('data-url');
+            replaceUrl = replaceUrl ? (/^https?:/i.test(replaceUrl) ? replaceUrl : API_BASE_URL + replaceUrl)
+                : API_BASE_URL + '/api/clinics/applications/documents/' + encodeURIComponent(btn.getAttribute('data-doc')) + '/replace/';
+            fetch(replaceUrl, {
                 method: 'POST', headers: authHeaders(), body: form
             }).then(function (response) {
                 return response.json().catch(function () { return null; }).then(function (data) {
@@ -529,6 +549,122 @@
             window.location.href = '/';
         });
 
+        // Opens an uploaded file. file_url needs the Bearer token, so it is fetched and shown as a blob.
+        $('statusDocs').addEventListener('click', function (e) {
+            var a = e.target.closest('.view-doc');
+            if (!a) return;
+            e.preventDefault();
+            var win = window.open('', '_blank');
+            if (!win) return;
+            fetch(a.getAttribute('data-url'), { headers: authHeaders() }).then(function (r) {
+                if (!r.ok) throw new Error('status ' + r.status);
+                return r.blob();
+            }).then(function (blob) {
+                win.location = URL.createObjectURL(blob);
+            }).catch(function () {
+                win.close();
+                alert('The file could not be opened. Please try again.');
+            });
+        });
+
+        // Required documents that were never uploaded (missing_document_types from /applications/my/).
+        function drawMissing(app) {
+            var box = $('statusMissing');
+            var types = (app.missing_document_types || []).map(function (t) {
+                return (t && typeof t === 'object') ? (t.document_type || t.type || t.value) : t;
+            }).filter(Boolean);
+            if (!types.length) { box.innerHTML = ''; return; }
+            box.innerHTML = '<div class="section-title">Not uploaded yet</div>' + types.map(function (t) {
+                return '<div class="doc-row" data-type="' + escapeHtml(t) + '">' +
+                    '<div class="d-flex justify-content-between align-items-center gap-2">' +
+                    '<div style="font-weight:600;">' + escapeHtml(DOC_TITLES[t] || t) + '</div>' +
+                    '<span class="doc-badge wait">Missing</span></div>' +
+                    '<div class="mt-2"><input type="file" class="form-control form-control-sm missing-file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">' +
+                    '<div class="field-error missing-error" style="display:none;"></div>' +
+                    '<button type="button" class="btn btn-sm btn-teal mt-2 missing-btn" data-type="' + escapeHtml(t) + '">Upload document</button></div></div>';
+            }).join('');
+        }
+
+        $('statusMissing').addEventListener('change', function (e) {
+            var row = e.target.closest('.doc-row');
+            var err = row && row.querySelector('.missing-error');
+            if (err) err.style.display = 'none';
+        });
+        $('statusMissing').addEventListener('click', function (e) {
+            var btn = e.target.closest('.missing-btn');
+            if (!btn || state.busy) return;
+            var row = btn.closest('.doc-row');
+            var err = row.querySelector('.missing-error');
+            err.style.display = 'none';
+            var file = row.querySelector('.missing-file').files[0];
+            var problem = !file ? 'Please choose a file.' : validateFile(file);
+            if (problem) { err.textContent = problem; err.style.display = 'block'; return; }
+            var form = new FormData();
+            form.append('document_type', btn.getAttribute('data-type'));
+            form.append('file', file);
+            var url = state.uploadUrl || (API_BASE_URL + '/api/clinics/applications/' + encodeURIComponent(state.applicationId) + '/documents/upload-missing/');
+            state.busy = true;
+            btn.disabled = true;
+            btn.textContent = 'Uploading...';
+            fetch(url, { method: 'POST', headers: authHeaders(), body: form }).then(function (response) {
+                return response.json().catch(function () { return null; }).then(function (data) {
+                    state.busy = false;
+                    if (!response.ok) {
+                        err.textContent = messageFrom(data) || describeError(response.status, data);
+                        err.style.display = 'block';
+                        btn.disabled = false;
+                        btn.textContent = 'Upload document';
+                        return;
+                    }
+                    state.notice = (data && data.message) || 'Document uploaded. It is awaiting review.';
+                    loadApplication();
+                });
+            }).catch(function () {
+                state.busy = false;
+                btn.disabled = false;
+                btn.textContent = 'Upload document';
+                err.textContent = 'Network error: could not reach the server.';
+                err.style.display = 'block';
+            });
+        });
+
+        // The status endpoint for the applicant (/applications/my/) carries the extra fields:
+        // missing_document_types, missing_document_upload_url, and per document file_url, replace_url.
+        async function mergeMy(app) {
+            try {
+                var response = await fetch(API_BASE_URL + '/api/clinics/applications/my/', { headers: authHeaders() });
+                if (!response.ok) return app;
+                var data = await response.json().catch(function () { return null; });
+                var list = Array.isArray(data) ? data : ((data && (data.applications || data.results || (data.application ? [data.application] : (data.id ? [data] : [])))) || []);
+                var mine = null;
+                list.forEach(function (a) { if (String(a.id) === String(app.id || state.applicationId)) mine = a; });
+                if (!mine) return app;
+                app.missing_document_types = mine.missing_document_types || app.missing_document_types || [];
+                app.missing_document_upload_url = mine.missing_document_upload_url || app.missing_document_upload_url || '';
+                var byId = {};
+                (mine.documents || []).forEach(function (d) { byId[d.id] = d; });
+                (app.documents || []).forEach(function (d) {
+                    var m = byId[d.id];
+                    if (!m) return;
+                    ['file_url', 'replace_url', 'rejection_reason', 'review_status'].forEach(function (k) { if (m[k] != null && m[k] !== '') d[k] = m[k]; });
+                });
+                if (!(app.documents || []).length && mine.documents) app.documents = mine.documents;
+                state.uploadUrl = app.missing_document_upload_url ? (/^https?:/i.test(app.missing_document_upload_url) ? app.missing_document_upload_url : API_BASE_URL + app.missing_document_upload_url) : '';
+            } catch (e) { /* the page works without the extra fields */ }
+            return app;
+        }
+
+        function messageFrom(data) {
+            var out = [];
+            (function walk(v) {
+                if (v == null) return;
+                if (typeof v === 'string') { out.push(v); return; }
+                if (Array.isArray(v)) { v.forEach(walk); return; }
+                if (typeof v === 'object') Object.keys(v).forEach(function (k) { walk(v[k]); });
+            })(data);
+            return out.join(' ');
+        }
+
         function showStatus(app) {
             var status = String(app.status || '').toUpperCase();
             var notes = app.review_notes || app.rejection_reason || '';
@@ -548,7 +684,7 @@
             if (status === 'APPROVED') {
                 icon.className = 'status-icon ok'; icon.innerHTML = '&#10003;';
                 $('statusTitle').textContent = 'Your clinic is approved';
-                $('statusText').textContent = 'You now have full access. Open your dashboard to manage your clinic.';
+                $('statusText').textContent = 'You now have full access. Open your dashboard to manage your clinic, or update a document below if one has changed.';
                 link.href = '/clinic-dashboard/';
                 link.textContent = 'Go to dashboard';
                 link.style.display = 'inline-block';
@@ -569,11 +705,13 @@
                 $('statusTitle').textContent = 'Application submitted';
                 $('statusText').textContent = 'The DOCONNECT team is reviewing your clinic. We\'ll email you once a decision is made.';
             }
+            drawMissing(app);
             showMeta(app);
             if (status === 'APPROVED') {
-                if (needsReplacing) {
-                    $('statusTitle').textContent = 'A document needs updating';
-                    $('statusText').textContent = 'Your clinic is approved. The DOCONNECT team asked for an updated document. Replace it below.';
+                var missingCount = (app.missing_document_types || []).length;
+                if (needsReplacing || missingCount) {
+                    $('statusTitle').textContent = 'Documents need your attention';
+                    $('statusText').textContent = 'Your clinic is approved. ' + (needsReplacing ? 'Replace the rejected document below. ' : '') + (missingCount ? 'Upload the documents that are still missing.' : '');
                     icon.className = 'status-icon no'; icon.innerHTML = '!';
                 }
                 setAccess(true);
@@ -592,7 +730,7 @@
             $('resubmitError').style.display = 'none';
             $('resubmitBtn').style.display = status === 'REJECTED' ? 'inline-block' : 'none';
             state.rejectedView = status === 'REJECTED';
-            drawStatusDocs(app, status === 'REJECTED' ? (REPLACE_WHILE_REJECTED ? 'all' : false) : reopened ? 'open' : true);
+            drawStatusDocs(app, status === 'REJECTED' ? (REPLACE_WHILE_REJECTED ? 'all' : false) : status === 'APPROVED' ? (APPROVED_CAN_REPLACE ? 'every' : true) : reopened ? 'open' : true);
             showPanel('panelStatus');
         }
 
@@ -616,6 +754,7 @@
                 buildForm();
                 showPanel('panelForm');
             } else {
+                data = await mergeMy(data);
                 showStatus(data);
             }
         }
