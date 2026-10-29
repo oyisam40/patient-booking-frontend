@@ -1,0 +1,57 @@
+{% extends "public_base.html" %}
+{% block title %}DOCONNECT | Join us{% endblock %}
+{% block content %}
+<section class="hero">
+    <h1>Join DOCONNECT</h1>
+    <p>Choose how you will use the platform. Already have an account? Log in.</p>
+</section>
+
+<section class="panel">
+    <div class="grid g3">
+        <div class="tile">
+            <div class="eyebrow">Patient</div>
+            <h3>Book and consult</h3>
+            <p>Find a doctor, book a time, consult and pay online.</p>
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+                <a class="btn-teal" href="{% url 'register' %}">Register</a>
+                <a class="btn-ghost" href="{% url 'home' %}">Login</a>
+            </div>
+        </div>
+        <div class="tile">
+            <div class="eyebrow">Doctor</div>
+            <h3>See more patients</h3>
+            <p>Set your availability and consult in person or online. You will upload your documents for review.</p>
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+                <a class="btn-teal" href="{% url 'doctor_register' %}">Register</a>
+                <a class="btn-ghost" href="{% url 'home' %}">Login</a>
+            </div>
+        </div>
+        <div class="tile">
+            <div class="eyebrow">Clinic</div>
+            <h3>Run your practice</h3>
+            <p>Manage doctors, bookings and payouts. Our team reviews your application before you go live.</p>
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+                <a class="btn-teal" href="/clinic-register/">Register</a>
+                <a class="btn-ghost" href="{% url 'home' %}">Login</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Registering a clinic? Have these ready</h2>
+    <p class="lead-sub">We review every clinic before it goes live.</p>
+    <div class="grid g4">
+        <div class="tile"><h3>Registration</h3><p>Proof of business registration.</p></div>
+        <div class="tile"><h3>Address</h3><p>Proof of your clinic's operating address.</p></div>
+        <div class="tile"><h3>Applicant ID</h3><p>ID of the person applying.</p></div>
+        <div class="tile"><h3>Bank account</h3><p>Proof of your bank account for payouts.</p></div>
+    </div>
+</section>
+
+<section class="panel text-center">
+    <h2>Looking for work?</h2>
+    <p class="lead-sub">See open positions at clinics on DOCONNECT.</p>
+    <a class="btn-teal" href="{% url 'vacancies' %}">Browse open positions</a>
+</section>
+{% endblock %}

@@ -1171,7 +1171,15 @@
         }
         if (response.status === 404) { setReviewError(fallbackMessage || 'No file was uploaded.'); return; }
         if (!response.ok) { setReviewError(describeError(await readJson(response), response.status)); return; }
-        const blob = await response.blob();
+        const raw = await response.blob();
+        // The server sends a generic type and extension-less names, so work out the real
+        // type from the first bytes. That makes the browser show the file instead of saving it.
+        const head = new Uint8Array(await raw.slice(0, 8).arrayBuffer());
+        let kind = raw.type;
+        if (head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46) kind = 'application/pdf';
+        else if (head[0] === 0xFF && head[1] === 0xD8 && head[2] === 0xFF) kind = 'image/jpeg';
+        else if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47) kind = 'image/png';
+        const blob = new Blob([raw], { type: kind });
         const objectUrl = URL.createObjectURL(blob);
         const win = window.open(objectUrl, '_blank');
         if (!win) setReviewError('The browser blocked the new tab. Allow pop-ups for this site and try again.');

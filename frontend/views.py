@@ -120,3 +120,20 @@ def clinic_recruitment(request):
 def my_applications(request):
     return render(request, 'my_applications.html')
 
+def public_home(request):
+    return render(request, 'public_home.html')
+
+def public_about(request):
+    return render(request, 'public_about.html')
+
+def public_services(request):
+    return render(request, 'public_services.html')
+
+def public_contact(request):
+    return render(request, 'public_contact.html')
+
+def public_join(request):
+    return render(request, 'public_join.html')
+
+
+

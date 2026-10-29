@@ -1,0 +1,148 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DOCONNECT{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <style>
+        * { box-sizing: border-box; }
+        :root { --teal: #1B9AAA; --teal-dark: #14727e; --text: #1a1a1a; --muted: #555; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1B9AAA; color: var(--text); margin: 0; min-height: 100vh;
+            display: flex; flex-direction: column; padding-top: 64px;
+        }
+        .bg-slides, .bg-tint { position: fixed; inset: 0; z-index: 0; }
+        .bg-slides { background: #1B9AAA; }
+        .bg-slides .slide { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 1.6s ease; }
+        .bg-slides .slide.on { opacity: 1; }
+        .bg-tint { background: linear-gradient(135deg, rgba(27,154,170,0.82), rgba(79,209,197,0.82)); }
+        @media (prefers-reduced-motion: reduce) { .bg-slides .slide { transition: none; } }
+
+        .mt-2 { margin-top: .5rem; } .mt-3 { margin-top: 1rem; } .text-center { text-align: center; }
+        .d-flex { display: flex; } .gap-2 { gap: .5rem; } .flex-wrap { flex-wrap: wrap; }
+        /* top bar */
+        .pub-nav { position: fixed; top: 0; left: 0; right: 0; height: 64px; z-index: 50; background: rgba(255,255,255,0.96); box-shadow: 0 2px 12px rgba(0,0,0,0.12); display: flex; align-items: center; padding: 0 20px; }
+        .pub-brand { font-weight: 800; color: var(--teal); font-size: 20px; text-decoration: none; display: flex; align-items: center; gap: 8px; margin-right: 24px; }
+        .pub-brand img { height: 32px; width: auto; border-radius: 6px; }
+        .pub-links { display: flex; gap: 4px; flex: 1; align-items: center; }
+        .pub-links a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 15px; padding: 8px 12px; border-radius: 8px; }
+        .pub-links a:hover { background: #e8f6f8; color: var(--teal); }
+        .pub-links a.active { color: var(--teal); background: #e8f6f8; }
+        .pub-cta { background: var(--teal); color: #fff !important; }
+        .pub-cta:hover { background: var(--teal-dark) !important; color: #fff !important; }
+        .pub-toggle { display: none; margin-left: auto; background: none; border: none; font-size: 26px; color: var(--teal); }
+        @media (max-width: 820px) {
+            .pub-toggle { display: block; }
+            .pub-links { display: none; position: absolute; top: 64px; left: 0; right: 0; background: #fff; flex-direction: column; align-items: stretch; padding: 10px 16px 16px; box-shadow: 0 8px 16px rgba(0,0,0,0.12); }
+            .pub-links.open { display: flex; }
+        }
+
+        main { position: relative; z-index: 1; flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; padding: 32px 16px 48px; }
+        .hero { color: #fff; text-align: center; padding: 48px 8px 32px; }
+        .hero h1 { font-size: clamp(32px, 6vw, 54px); font-weight: 680; margin: 0 0 14px; text-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        .hero p { font-size: 17px; max-width: 620px; margin: 0 auto 26px; line-height: 1.6; color: rgba(255,255,255,0.95); }
+        .btn-light-pill { display: inline-block; background: #fff; color: var(--text); font-weight: 700; padding: 13px 28px; border-radius: 12px; text-decoration: none; margin: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .btn-light-pill:hover { opacity: .92; color: var(--text); }
+        .btn-outline-pill { display: inline-block; border: 2px solid #fff; color: #fff; font-weight: 700; padding: 11px 26px; border-radius: 12px; text-decoration: none; margin: 4px; }
+        .btn-outline-pill:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+        .panel { background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); margin-bottom: 24px; }
+        .panel h2 { font-size: 24px; font-weight: 800; margin: 0 0 6px; }
+        .panel .lead-sub { color: var(--muted); margin: 0 0 20px; }
+        .eyebrow { color: var(--teal); font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; margin-bottom: 6px; }
+        .grid { display: grid; gap: 16px; }
+        .g3 { grid-template-columns: repeat(3, 1fr); }
+        .g2 { grid-template-columns: repeat(2, 1fr); }
+        .g4 { grid-template-columns: repeat(4, 1fr); }
+        @media (max-width: 820px) { .g3, .g4 { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 560px) { .g3, .g2, .g4 { grid-template-columns: 1fr; } }
+        .tile { border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 18px; background: #fafdfd; }
+        .tile h3 { font-size: 17px; font-weight: 800; margin: 0 0 6px; }
+        .tile p, .tile li { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0; }
+        .tile ul { padding-left: 18px; margin: 0; }
+        .step-no { width: 34px; height: 34px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+        .stat { text-align: center; padding: 14px 6px; }
+        .stat b { display: block; font-size: 32px; color: var(--teal); font-weight: 900; }
+        .stat span { color: var(--muted); font-size: 14px; }
+        .btn-teal { display: inline-block; background: var(--teal); color: #fff; border: none; font-weight: 700; padding: 10px 20px; border-radius: 10px; text-decoration: none; cursor: pointer; font-size: 15px; }
+        .btn-teal:hover { background: var(--teal-dark); color: #fff; }
+        .btn-ghost { display: inline-block; border: 1px solid var(--teal); color: var(--teal); font-weight: 700; padding: 9px 20px; border-radius: 10px; text-decoration: none; font-size: 15px; background: #fff; }
+        .btn-ghost:hover { background: #e8f6f8; color: var(--teal); }
+
+        footer.pub-footer { position: relative; z-index: 1; background: rgba(10,60,68,0.92); color: rgba(255,255,255,0.88); padding: 28px 20px; font-size: 14px; }
+        footer .inner { max-width: 1080px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-between; }
+        footer a { color: #cdeff3; text-decoration: none; }
+        footer a:hover { color: #fff; text-decoration: underline; }
+        footer h4 { font-size: 14px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 8px; color: #fff; }
+        footer .col { min-width: 180px; }
+        footer .col div { margin-bottom: 4px; }
+        footer .copy { max-width: 1080px; margin: 18px auto 0; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px; font-size: 13px; }
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+<div class="bg-slides" id="bgSlides" aria-hidden="true"></div>
+<div class="bg-tint" aria-hidden="true"></div>
+
+{% include "public_nav.html" %}
+
+<main>
+{% block content %}{% endblock %}
+</main>
+
+<footer class="pub-footer">
+    <div class="inner">
+        <div class="col">
+            <h4>DOCONNECT</h4>
+            <div>Book trusted doctors, or manage your practice, all in one place.</div>
+        </div>
+        <div class="col">
+            <h4>Explore</h4>
+            <div><a href="{% url 'public_home' %}">Home</a></div>
+            <div><a href="{% url 'public_about' %}">About us</a></div>
+            <div><a href="{% url 'public_services' %}">Services</a></div>
+            <div><a href="{% url 'public_join' %}">Join us</a></div>
+            <div><a href="{% url 'public_contact' %}">Contact us</a></div>
+        </div>
+        <div class="col">
+            <h4>Contact</h4>
+            <div><a href="mailto:doconnect.online@gmail.com">doconnect.online@gmail.com</a></div>
+            <div><a href="tel:+27726554193">072 655 4193</a></div>
+            <div>Block 4, Ground Floor, Bryanston Gate Office Park,<br>71 Homestead Ave, Bryanston, Sandton, 2194</div>
+        </div>
+    </div>
+    <div class="copy">&copy; <span id="yr"></span> DOCONNECT. All rights reserved.</div>
+</footer>
+
+<script>
+    document.getElementById('yr').textContent = new Date().getFullYear();
+    var tg = document.getElementById('pubToggle'), lk = document.getElementById('pubLinks');
+    if (tg) tg.addEventListener('click', function () { lk.classList.toggle('open'); });
+
+    // Same background slideshow as the landing page. Missing images are skipped.
+    const SLIDES = [
+        "{% static 'images/alterfines-medicine-2361046_1920.jpg' %}",
+        "{% static 'images/docc.jpg' %}",
+        "{% static 'images/femaledoc.jpg' %}",
+        "{% static 'images/helpatient.jpg' %}"
+    ];
+    (function () {
+        const box = document.getElementById('bgSlides');
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const check = src => new Promise(res => { const i = new Image(); i.onload = () => res(src); i.onerror = () => res(null); i.src = src; });
+        Promise.all(SLIDES.map(check)).then(list => {
+            const ok = list.filter(Boolean);
+            if (!ok.length) return;
+            const els = ok.map(src => { const d = document.createElement('div'); d.className = 'slide'; d.style.backgroundImage = 'url("' + src + '")'; box.appendChild(d); return d; });
+            let i = 0;
+            els[0].classList.add('on');
+            if (els.length < 2 || reduce) return;
+            setInterval(() => { if (document.hidden) return; els[i].classList.remove('on'); i = (i + 1) % els.length; els[i].classList.add('on'); }, 6000);
+        });
+    })();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

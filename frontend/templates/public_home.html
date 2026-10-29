@@ -1,0 +1,60 @@
+{% extends "public_base.html" %}
+{% block title %}DOCONNECT | Home{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="eyebrow" style="color:rgba(255,255,255,.9)">For your convenience</div>
+    <h1>Quality care, one click away</h1>
+    <p>Book appointments with trusted doctors, meet them in person or on video, and pay securely. Clinics and doctors manage everything in one place.</p>
+    <a class="btn-light-pill" href="{% url 'public_join' %}">Get started</a>
+    <a class="btn-outline-pill" href="{% url 'public_services' %}">See our services</a>
+</section>
+
+<!-- DEMO NUMBERS: replace these with real figures before launch. -->
+<section class="panel">
+    <div class="grid g4" id="statGrid"></div>
+</section>
+
+<section class="panel">
+    <div class="eyebrow">How it works</div>
+    <h2>Three simple steps</h2>
+    <p class="lead-sub">From finding a doctor to paying for your visit.</p>
+    <div class="grid g3">
+        <div class="tile"><div class="step-no">1</div><h3>Find a doctor</h3><p>Search doctors and clinics, check their availability and choose the one that suits you.</p></div>
+        <div class="tile"><div class="step-no">2</div><h3>Book a time</h3><p>Pick a free slot and book. You get a notification when the doctor accepts.</p></div>
+        <div class="tile"><div class="step-no">3</div><h3>Consult and pay</h3><p>See your doctor in person or on video, chat with them, and pay securely online.</p></div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="eyebrow">What we offer</div>
+    <h2>Built for patients, doctors and clinics</h2>
+    <p class="lead-sub">One platform, three kinds of accounts.</p>
+    <div class="grid g3">
+        <div class="tile"><h3>Patients</h3><p>Book appointments, check your symptoms, chat and video with your doctor, and keep track of your bookings.</p></div>
+        <div class="tile"><h3>Doctors</h3><p>Set your availability, manage appointments, consult online and find positions at clinics.</p></div>
+        <div class="tile"><h3>Clinics</h3><p>Manage doctors and staff, your calendar and reports, recruit, and get paid straight to your bank account.</p></div>
+    </div>
+    <div class="mt-3"><a class="btn-teal" href="{% url 'public_services' %}">Explore all services</a></div>
+</section>
+
+<section class="panel text-center">
+    <h2>Run a clinic or practise as a doctor?</h2>
+    <p class="lead-sub">Join DOCONNECT and reach patients who are ready to book.</p>
+    <a class="btn-teal" href="{% url 'public_join' %}">Join us</a>
+    <a class="btn-ghost" href="{% url 'vacancies' %}">Browse open positions</a>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script>
+    // DEMO NUMBERS: change these before launch.
+    var STATS = [
+        { n: '120+', t: 'Verified doctors' },
+        { n: '35', t: 'Partner clinics' },
+        { n: '5,000+', t: 'Appointments booked' },
+        { n: '4.8 / 5', t: 'Average patient rating' }
+    ];
+    document.getElementById('statGrid').innerHTML = STATS.map(function (s) {
+        return '<div class="stat"><b>' + s.n + '</b><span>' + s.t + '</span></div>';
+    }).join('');
+</script>
+{% endblock %}

@@ -76,4 +76,14 @@ urlpatterns = [
     path('clinic-recruitment/', views.clinic_recruitment, name='clinic_recruitment'),
 
     path('my-applications/', views.my_applications, name='my_applications'),
+
+    path('public-about/', views.public_about, name='public_about'),
+
+    path('public-contact/', views.public_contact, name='public_contact'),
+
+    path('public-home/', views.public_home, name='public_home'),
+
+    path('public-join/', views.public_join, name='public_join'),
+
+    path('public-services/', views.public_services, name='public_services')
 ]

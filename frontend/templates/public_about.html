@@ -1,0 +1,80 @@
+{% extends "public_base.html" %}
+{% block title %}DOCONNECT | About us{% endblock %}
+{% block extra_css %}
+.member { text-align: center; }
+.member .avatar { width: 84px; height: 84px; border-radius: 50%; background: #e8f6f8; color: var(--teal); font-weight: 800; font-size: 28px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+.member .role { color: var(--teal); font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+.member .meta { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.member blockquote { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--teal); background: #f3fafb; font-style: italic; font-size: 14px; color: #333; text-align: left; border-radius: 0 8px 8px 0; }
+{% endblock %}
+{% block content %}
+<section class="hero">
+    <h1>About DOCONNECT</h1>
+    <p>We make it easy to find trusted care and to run a practice.</p>
+</section>
+
+<section class="panel">
+    <div class="eyebrow">Our story</div>
+    <h2>Why we built DOCONNECT</h2>
+    <p class="lead-sub">Getting to see a doctor should not take phone calls, waiting rooms and guesswork. DOCONNECT brings patients, doctors and clinics together on one platform, so booking, consulting and paying are simple for everyone.</p>
+    <div class="grid g3">
+        <div class="tile"><h3>Our mission</h3><p>Make quality healthcare easy to reach and easy to run.</p></div>
+        <div class="tile"><h3>Trusted by design</h3><p>Clinics and doctors submit their documents, and our team reviews and approves each one before they go live.</p></div>
+        <div class="tile"><h3>Secure payments</h3><p>Payments run through Paystack, and clinics are paid to a verified bank account.</p></div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="eyebrow">Impact</div>
+    <h2>DOCONNECT in numbers</h2>
+    <!-- DEMO NUMBERS: replace these with real figures before launch. -->
+    <div class="grid g4 mt-2" id="statGrid"></div>
+</section>
+
+<section class="panel">
+    <div class="eyebrow">The team</div>
+    <h2>The people behind DOCONNECT</h2>
+    <p class="lead-sub">A small team building the platform.</p>
+    <div class="grid g3" id="teamGrid"></div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script>
+    // DEMO NUMBERS: change these before launch.
+    var STATS = [
+        { n: '120+', t: 'Verified doctors' },
+        { n: '35', t: 'Partner clinics' },
+        { n: '5,000+', t: 'Appointments booked' },
+        { n: '4.8 / 5', t: 'Average patient rating' }
+    ];
+    document.getElementById('statGrid').innerHTML = STATS.map(function (s) {
+        return '<div class="stat"><b>' + s.n + '</b><span>' + s.t + '</span></div>';
+    }).join('');
+
+    // EDIT THE TEAM HERE. Leave qualification or experience as '' to hide that line.
+    // The quotes are drafts: each person should approve or rewrite theirs.
+    var TEAM = [
+        { name: 'Oyisa Mjali', role: 'Frontend Developer',
+          qualification: '', experience: '',
+          quote: 'Good software should feel simple, even when a lot is happening behind it.' },
+        { name: 'Ntsako Muchavi', role: 'Backend Developer',
+          qualification: '', experience: '',
+          quote: 'Patients and clinics trust us with important information, so we build it carefully.' },
+        { name: 'Mr V', role: 'Product Engineer',
+          qualification: '', experience: '',
+          quote: 'A great product starts with solving a real problem for real people.' }
+    ];
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    document.getElementById('teamGrid').innerHTML = TEAM.map(function (m) {
+        var initials = m.name.split(/\s+/).map(function (p) { return p.charAt(0); }).join('').slice(0, 2).toUpperCase();
+        return '<div class="tile member">' +
+            '<div class="avatar">' + esc(initials) + '</div>' +
+            '<h3>' + esc(m.name) + '</h3>' +
+            '<div class="role">' + esc(m.role) + '</div>' +
+            (m.qualification ? '<div class="meta"><b>Qualification:</b> ' + esc(m.qualification) + '</div>' : '') +
+            (m.experience ? '<div class="meta"><b>Experience:</b> ' + esc(m.experience) + '</div>' : '') +
+            (m.quote ? '<blockquote>&ldquo;' + esc(m.quote) + '&rdquo;</blockquote>' : '') +
+            '</div>';
+    }).join('');
+</script>
+{% endblock %}
